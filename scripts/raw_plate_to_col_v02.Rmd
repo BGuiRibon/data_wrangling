@@ -1,0 +1,253 @@
+---
+title: "Generic converter of plate- to column-data"
+subtitle: "Use with discretion and QC the results!"
+author: "Mario Niepel"
+date: "December 2020"
+version: "0.2"
+output:
+     html_document:
+          toc: true
+          toc_depth: 2
+          theme: united
+
+---
+
+```{r include=FALSE}
+
+library(tidyverse)
+library(readxl)
+
+```
+
+Summary and requirements:
+
+- script takes raw data in plate format coming off readers (such as HTM, CTG plate reader, maybe IncuCyte) in plate-based formats and converts it to column-based format ready to merge with meta-data
+     - separate parsers exist for IncuCyte and PlateReader
+     - this one is generic and therefore requires annotation of the input data blocks
+- raw data blocks have to be annotated in the same manner as meta-data plate-based blocks
+     - blocks of four
+     - 'readout' (coding variable) - 'numeric' 
+     - '<measurement>'
+- raw data blocks have to be complete and need to be fully numerical to allow downstream computation
+- there has to be a single pair of cells desinating which is the readout in any file or sheet for
+     - 'Plate_ID' - 'plate id'
+     - data with equal Plate_ID will be appended by column
+     - data with different Plate_ID will be appended by row
+-> the script will fail if there are not identical measures for all Plate IDs
+
+
+
+
+```{r designation of files and directory}
+
+#// Import of meta data and organization of folders and files
+
+#// user input of which meta file to load
+#// format has to be according to specifications laid out above
+in_file <- c("20201218 1007 4T1 CT26_raw.xlsx")
+
+#// name of assembled complete file
+out_file <- "20201218_JM_raw_assembled"
+
+               # #// additional test case
+               # in_file <- c("20201215_JM_raw_data_1.csv", "20201215_JM_raw_data_2.csv")
+               # 
+               # #// name of assembled complete file
+               # out_file <- "20201215_JM_raw_assembled"
+
+#// input and output directories 
+in_dir <- "./data/"
+out_dir <- "./work/"
+
+```
+
+
+```{r sanity checks}
+
+#// read filetype of in_files
+in_file_type <- unique(tolower(str_extract(in_file, "\\....$|\\.....$")))
+
+#// make sure that there is a single file_type
+if (length(in_file_type) > 1) stop("Can't process more than one filetype at once.")
+
+
+#// make sure file_types are compatible with input
+if (in_file_type %in% c(".tsv", ".txt", ".csv", ".xls", ".xlsx") == F) stop("Filetype not recognized.")
+
+#// check if out_dirs exists; if not make it
+if (!dir.exists(out_dir)) {dir.create(out_dir)}
+
+```
+
+
+
+```{r read data}
+#// empty out ls_data
+ls_data <- vector(mode = "list")
+
+if (in_file_type %in% c(".tsv", ".txt")) {
+     #// read tab delimited files
+     ls_data <- lapply(paste0(in_dir, in_file), function(x) read_tsv(x, col_names = FALSE)) 
+     #// name the list items by names of in_file
+     names(ls_data) <- str_split(in_file, "\\....$|\\.....$", 1)
+     } else if (in_file_type == c(".csv")) {
+          #// read comma delimited files
+          ls_data <- lapply(paste0(in_dir, in_file), function(x) read_csv(x, col_names = FALSE)) 
+          #// name the list items by names of in_file
+          names(ls_data) <- str_split(in_file, "\\....$|\\.....$", 1)
+     } else { 
+          #// read excel files
+          #// loop through each in_file individually and read in all sheets
+          for (i in in_file) {
+               #// read sheet names and number of sheets
+               sheet_names <- excel_sheets(paste0(in_dir, i)) 
+               # read all sheets of input file
+               temp <- lapply( sheet_names, function(x) { read_excel(paste0(in_dir, i), x, col_names = FALSE ) } )
+               # name all sheets in list
+               names(temp) <- sheet_names
+               # append named input list to input list
+               ls_data <- append(ls_data, temp) }
+     }
+
+rm(temp, i, sheet_names)
+
+```
+
+
+
+
+```{r parse plate layout to dataframe}
+
+parse <- function(in_df) {
+
+     #// remove all NA rows from input df
+          in_df <- in_df[rowSums(is.na(in_df)) != ncol(in_df),] #// remove cols of all NA
+
+     #// identify Plate_ID from input df
+          Plate_ID <- in_df[[which(in_df == "Plate_ID", arr.ind = T)[1,1], which(in_df == "Plate_ID", arr.ind = T)[1,2] + 1]]
+
+     #// generate ouput df with Plate_ID, Plate_Row, Plate_Col, Well_No
+          out_df <- data.frame(Plate_ID = (rep(Plate_ID, 384)),
+                               Plate_Row = (rep(LETTERS[seq(1:16)],24)),
+                               Plate_Col = as.integer(trunc((seq(1:384) + 15)/16)),
+                               Well_No = seq(1:384))
+
+     #// add column for Well_name (A01-P24)
+     #// Well_Name is concatenation of Plate_Row and Plate_Col
+     #// str_pad adds a leading character ("0") to width (2)
+          out_df <- out_df %>% 
+          mutate(Well_ID = paste0(Plate_Row, as.factor(str_pad(Plate_Col, 2, pad = "0")))) %>%
+     #// sort by well number
+          arrange(Well_No)
+
+     #// identify positions of "readout"
+          readouts <- data.frame(which(in_df == "readout", arr.ind = TRUE))       
+
+     #// sort variables table by row
+          readouts <- readouts[order(readouts$row),]                         
+
+     #// join 384 plate format raw data with out_df
+          end_row <- 0
+          for (i in 1:nrow(readouts)) {   
+     
+          #// empty out dataframe
+               temp <- data.frame()
+        
+          #// put row/col value of current plate map in row and col
+               row <- readouts[i,"row"]
+               col <- readouts[i,"col"]
+
+          #// identify variable type, names, and attribute
+               type <- in_df[row, col + 1]
+               name <- in_df[row + 1, col]
+
+          #// slice out plate based on location of 'variables'
+               if  ( i == nrow(readouts) ) (end_row <- nrow(in_df) ) else (end_row <- readouts[i + 1,"row"] - 1)
+               temp <- in_df %>% slice((row + 2):end_row)
+
+          #// remove NA rows and NA columns
+               temp <- temp[rowSums(is.na(temp)) != ncol(temp),] #// remove cols of all NA
+               temp <- temp[,colSums(is.na(temp)) != nrow(temp)] #// remove rows of all NA     
+          
+          #// append column to well_level dataframe
+               if (type == "numeric") { 
+                         out_df <- cbind(out_df, as.numeric(unlist(temp, use.names = F)))
+                    } else {
+                         out_df <- cbind(out_df, unlist(temp, use.names = F))
+               }
+          #// add proper metadata heading to new df column 'Name_Attribute' e.g drug_id
+               colnames(out_df)[ncol(out_df)] <- name
+     }
+     return(out_df)
+          
+}
+
+
+```
+
+
+
+
+```{r parse ls_data}
+
+#// call data parsing for all list items read into ls_data
+ls_out <- lapply(ls_data, function(x) parse(x))
+
+#// give each list item the appropriate name
+names(ls_out) <- names(ls_data)
+
+#// read out Plate_IDs for each list item
+Plate_ID <- sapply(ls_out, function(x) { X <- unlist(x, use.names = F); x <- as.character(x[1,1]) } )
+Plate_ID <- unname(Plate_ID)
+
+#// create empty merge list
+temp <- vector(mode="list", length = length(unique(Plate_ID)))
+
+#// loop over unique Plate_IDs
+for (i in 1:length(unique(Plate_ID))) {
+     #// cycle through all list items with each unique Plate_ID and do full_join
+     temp[[i]] <- reduce(ls_out[which( Plate_ID==unique(Plate_ID)[i] ) ], full_join)
+     }
+
+#// perform a full rbind over all items in merge_list
+ls_out <- reduce(temp, rbind)
+
+
+```
+
+
+
+
+```{r assmble and write data}
+
+write_tsv(ls_out, paste0(out_dir, out_file, ".tsv"))
+
+
+```
+
+
+###// Version History
+
+
+#// version 0.2
+- written for 20201218_JM
+"20201218 1007 4T1 CT26 for Mario (1).xlsx"
+- back compatible with "20201215_JM_raw_data_1/2.csv" once annotation was adjusted to conform to new script
+
+Implemented:
+- output to TSV (use this from now on for all outputs)
+- enforcement of some kind of Plate_ID output
+- detection of CSV, TSV, Excel for reading
+- reading of multi-sheet Excels
+- merge of same Plate_IDs but different measurements
+- merge of different Plate_IDs but same measurements
+--> No flexibility in demand for square data
+
+
+
+
+#// Version 0.1
+- written for 20201215_JM
+
+in_file <- c("20201215_JM_raw_data_1.csv", "20201215_JM_raw_data_1.csv")
+out_file <- "20201215_JM_raw_data_assembled"

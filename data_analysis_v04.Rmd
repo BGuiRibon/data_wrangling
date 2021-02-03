@@ -1,0 +1,2155 @@
+---
+title: "1st Data Analysis"
+subtitle: "Use with discretion and QC the results!"
+author: "Mario Niepel"
+date: "December 2020"
+version: "0.4"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    theme: united 
+    code_folding: hide
+editor_options: 
+  markdown: 
+    wrap: 120
+---
+
+# -----------------------------------------------
+
+# SETUP
+
+Key libraries for data analysis are 'tidyverse' (ggplot2, dplyr, stringr, ...), 'patchwork' to arrange plots, and 'DT'
+to present data in tabel format. Additional libraries may need to be included for certain analyses, especially when
+statistical analysis is necessary.
+
+```{r library_calls, include=FALSE}
+
+set.seed(0815)
+# 
+# library(groundhog)
+# groundhog_day <- "2021-01-01"
+# 
+# groundhog.library("tidyverse",groundhog_day, ignore.deps = "xfun")
+# groundhog.library("patchwork", groundhog_day)
+# groundhog.library("DT", groundhog_day)
+
+#// library calls w/o groundhog to knit document
+library("tidyverse")
+library("patchwork")
+library("DT")
+
+```
+
+Functions to run assembly "assembly_functions" and analysis "analysis_functions" are stored in the scripts directory.
+These functions are part of any given data analysis package and once the analysis is completed they should not be
+updated. Should additional analysis be performed that requires updated functions, they should be added as a separate
+file in the "./scripts" folder.
+
+```{r check_scripts}
+
+
+#// check on source for assembly functions
+if (!file.exists("./scripts/assembly_functions.R")) { stop("Can't find assembly functions.") }
+#// source assembly script
+source("./scripts/assembly_functions.R")
+
+#// check on source for analysis functions
+if (!file.exists("./scripts/analysis_functions.R")) { stop("Can't fund analysis functions.") }
+#// source analysis functions
+source("./scripts/analysis_functions.R")
+
+
+```
+
+These analysis/plotting functions are part of this Rmd file to help in editing and generating additional functions. They
+should be moved to the R source file "./scripts/analysis_functions.R" for individual analyses.
+
+```{r functions, eval=FALSE, fig.height=10, fig.width=16, include=FALSE}
+
+#// FUNCTION: save ggplots into PDF
+     
+pdf_plot <- function(plots, name, width, height) {
+     
+     #// ensure that previous plots are not overwritten     
+     if (file.exists(paste0(name, ".pdf"))) { return(list(name = paste0(name, ".pdf"), saved = FALSE)) }
+	
+	#// open port to pdf
+          pdf(file = paste0(name, ".pdf"),   #// The directory you want to save the file in
+          width = width, #// The width of the plot in inches
+          height = height) #// The height of the plot in inches
+
+     #// display all plots
+          for (i in plots) { print(i) }
+     
+     # close port to pdf
+          dev.off()
+          invisible(NULL)
+
+     return(list(name = paste0(name, ".pdf"), saved = TRUE))
+}
+
+
+#// FUNCTION: Custom Box Plots
+
+cust_boxplot <- function(df, x_val, y_val, color, r_fac, c_fac, title) {
+
+     #// pipe dataframe into plot
+          df %>% 
+
+     #// basic plot setup
+          ggplot(aes(x = .data[[x_val]], y = .data[[y_val]], fill = .data[[color]])) + 
+
+     #// geoms for box_ and point_
+          geom_boxplot(position = position_dodge(width = .9)) +
+          geom_point(position = position_jitterdodge(dodge.width = 0.9)) +
+
+     #// custom color scale for discrete variable
+          scale_fill_viridis_d(begin = 0.2,
+          				 end = 1,
+          				 alpha = 1,
+          				 direction = 1,
+          				 na.value = "gray") + 
+
+     #// theme and text layouts
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          labs(title = {{title}},
+          caption = caption) +
+     #// facet layout
+          facet_grid(rows = vars( .data[[r_fac]] ), cols = vars(.data[[c_fac]]) )     
+
+}
+
+#// FUNCTION: Plate Heat Maps
+
+plate_heat_map_plot <- function(col, plate, df) { 
+
+     #// code to adjust legend breaks and labels based on range
+     #// get range of values to plot
+     values <- df[df$Plate_ID == plate, colnames(df) == col]
+     
+     #// check if values are 0 or negative to set scale at identity and leave breaks/labels at default
+     if ((min(values, na.rm = TRUE) <= 0 ) | max(values, na.rm = TRUE) / min(values, na.rm = TRUE) <= 100) {
+     	scale_trans <- "identity" 
+     	legend_breaks <- pretty(min(values, na.rm = TRUE):max(values, na.rm = TRUE), 6)
+     	legend_labels <- format(round(legend_breaks, 2), scientific = F)
+     	} else {
+     	#// set scale to log
+     	scale_trans <- "log"
+	
+	     #// define very broad range of breaks
+	     #// determine if breaks should have half-log or full-log steps
+	     if ( max(values, na.rm = TRUE) / min(values, na.rm = TRUE) > 10000 ) {
+	          #// use full log steps if five or more log steps
+	          legend_breaks <- round(10^seq(-10, 10, 1), 2)
+	     } else {
+	          #// use half log steps if less than 5 log steps
+	          legend_breaks <- round(10^seq(-10, 10, 0.5), 2)
+	     }
+	          
+	     #// define legend labels as non-scientific for 'reasonable' values
+	     if ( (min(values, na.rm = TRUE) >= 0.001) & (max(values, na.rm = TRUE) <= 1000) ) { 
+	     	legend_labels <- format(legend_breaks, scientific = F)
+	     
+	     #// use scientific notification if values are 'unreasonable'
+	     } else {
+	     	legend_labels <- format(legend_breaks, digits = 2, width = 5, format = "e")
+     	}
+	}
+
+     #// nudge for offsetting text labels
+	nudge <- c( rep(0.25, times = 16), rep(-0.25, times = 16))    
+	#// define label independently from col and adjust to reflect correct info to display
+	label <- col
+	
+	#// filter out all data exect for plate to plot
+     df %>% filter(Plate_ID == {{ plate }}) %>% 
+
+	#// generate plot by Row and Col
+     ggplot(aes(x = Plate_Col, y = Plate_Row)) + 
+     
+	#// set up axis/grid
+	#// set coord_fixed to maintain proper plate ration		
+	coord_fixed() + 
+     #// set labels for plate
+	scale_x_discrete(limits = c(as.character(seq(1, 24)))) +
+     scale_y_discrete(limits = rev(levels(as.factor(df$Plate_Row)))) +
+     
+	#// set up theme, title, and caption
+	#// place legend at bottom of the plot
+	theme(legend.position = "bottom",
+		 legend.box = "horizontal",
+		 text = element_text(size = 20)) +
+	#// generate automatic title based on column and plate ID
+     labs(title = paste("Readout:", col, "\n1st unique plate:", plate) ,
+     #// Experiment ID as caption
+     caption = caption) +
+     
+	#// plot data and labels
+     geom_tile(aes(fill = .data[[col]]), color = "black") +
+     
+     scale_fill_viridis_c(begin = 0,
+     				 alpha = 0.5,
+     				 direction = -1,
+     				 na.value = "gray",
+     				 trans = {{ scale_trans }},
+                          breaks = {{ legend_breaks }},
+                          labels = {{ legend_labels }} ) +
+     
+     guides(fill = guide_colorbar(barwidth = unit(6, "in"),
+     					    barheight = unit(.6, "in"))) +
+     
+     geom_text(aes(x = Plate_Col,
+     		    y = Plate_Row, 
+     		    label = .data[[label]]), 
+     		    check_overlap = TRUE,
+     		    nudge_y = nudge, size = 4) 
+
+}
+
+#// FUNCTION: Propagation of positive and negative controls
+
+
+ctrl_propagation <- function(df, ctrl_level, ctrl_var, group_vars) {
+
+group_vars <- unlist(group_vars, use.names = F)
+  
+#// generate a list of lists that contains all relevant controls only
+temp_ctrls <- df %>%
+     #// group by variables with separate DMSO controls
+     group_by( across(all_of(group_vars)) ) %>%
+     #// identify and filter all controls
+     filter( across(all_of(ctrl_var)) != "none") %>%
+             # #// legacy filter below: across without all_of soon deprecated
+             # #// identify and filter all controls
+             # #// filter( across(ctrl_var) != "none") %>%
+     #// remove column for Drug_ID
+     select(-.data[[ctrl_lvl]]) %>%
+     #// split groups into individual lists
+     nest()
+#// change names of data column to dmso
+names(temp_ctrls)[[which(names(temp_ctrls) == "data")]] <- "ctrl"
+
+#// generate a list of lists that contains all data that needs appending
+temp_data <- df %>%
+     #// keep only items that are not Drug_controls (pos or neg)
+     filter(across(all_of(ctrl_var)) == "none") %>%
+             # #// legacy filter below: across without all_of soon deprecated
+             # #// keep only items that are not Drug_controls (pos or neg)
+             # #// filter(across(ctrl_var) == "none") %>%
+     #// group by variables now including Drug_ID
+     group_by( across(all_of(c(group_vars, ctrl_lvl))) ) %>%
+     #// split groups into individual lists
+     nest()
+
+#// merge two nested lists by Cell_Line, DOX, and time
+temp_data <- full_join(temp_data, temp_ctrls)
+
+#// keep only items that are not Drug_controls (pos or neg)
+#data_ctrl <- filter(data_ctrl, Drug_control == "none")
+
+#// assemble control and data and unnest
+df_merged <- temp_data %>%
+     #// create new list column with merged data + ctrl
+     mutate(merged = map2(data, ctrl, rbind)) %>%
+     #// remove extraneous data columns
+     select(-data, -ctrl) %>%
+     #// unnest everything into a single dataframe
+     unnest(cols = c(merged))
+
+return(df_merged)
+
+}
+
+
+
+
+```
+
+This chunk defines common ggplot elements for the current analysis to reduce copying and pasting code.
+
+```{r common ggplot elements}
+
+#// analysis developed for 20201130_AL
+
+#// these ggplot element will be added to remaining plots below
+#// defining them once makes the code shorter and easier to read
+
+#// define breaks and details for color scale
+scale_col <- scale_color_viridis_c(begin = 0,
+							alpha = 0.5,
+							direction = -1,
+							na.value = "gray",
+							trans = "log",
+		                         breaks = c(10, 3.1, 1, 0.31, 0.1, 0.03, 0.01, 0.003, 0.001)) 
+#// define x axis breads to conform to measurements
+scale_x   <- scale_x_continuous(breaks = seq(from = 6, to = 138, by = 12)) 
+#// manual conversion of legend variables to attributes and labels
+scale_lt	<- scale_linetype_manual(name = "Controls", values = c("neg" = "dashed"), labels = c("DMSO control")) 
+#// change the display order of the two legends
+guides	<- guides(color = guide_legend(order = 1), linetype = guide_legend(order = 2)) 
+
+
+```
+
+# -----------------------------------------------
+
+# DATA ASSEMBLY
+
+In this section the meta data and raw data get merged by the calling the 'data_assembly' functions (in
+"./scripts/assembly_functions.R") called with the experiment info specific to this experiment. A summary QC file is
+saved into the data folder. This process will be skipped if a fully assembled data file is already present.
+
+```{r data_assembly}
+
+#// 20200908_AL, assembled and plotted (needed to adjust meta/raw merge column type)
+
+exp_info <- list(
+	Exp_ID       = c("20201130_AL"),
+	in_dir       = c("./data/"),
+	out_dir      = c("./data/"),
+	meta_in_file = c("20201130_AL_metadata.csv"),
+	raw_in_file  = c("20201130_AL_IncuCyte_parsed_Plate2.tsv",
+				  "20201130_AL_IncuCyte_parsed_Plate1.tsv",
+				  "20201130_AL_PlateReader_parsed_Plate1.tsv",
+				  "20201130_AL_PlateReader_parsed_Plate2.tsv"),
+	out_file     = c("20201130_AL_data"),
+	join_by      = c("Plate_ID" = "Plate_ID", "Well_ID" = "Well_ID"),
+	date         = Sys.time() )
+
+#// check on source for assembly functions
+if (!file.exists(paste0(exp_info[[3]], exp_info[[6]], ".tsv"))) {
+	
+	#// call core assembly process
+	QC <- data_assembly(exp_info)
+	
+	#// global QC output
+	final_qc(QC)
+
+}
+
+#// import data file
+suppressMessages(data <- read_tsv(paste0(exp_info[[3]], exp_info[[6]], ".tsv")))
+
+#// check if out_dir exists; if not make it
+if (dir.exists("./analysis/") == FALSE) {dir.create("./analysis/")}
+
+	
+```
+
+# -----------------------------------------------
+
+# CLEAN & QC
+
+In this section automated cleanup of the assembled data is performed. Column names are cleaned that got duplicated
+during there merge process during data assembly. As a precaution this step is performed after saving the assembled file
+in case the information is not redundant. Experiment, plate, well, and data columns are identified and the prefixes are
+removed. Finally, Exp_ID, date, and captions for plots are defined.
+
+```{r data autocleanup}
+
+#// drop all column names with .x or .y or .z at end of word 
+#// these were duplicated during raw_data merger process when two columns were identical
+data[str_which(names(data), "\\.x$|\\.y$|\\.z$")] <- NULL
+
+#// remove all columns that end in _raw (duplicates from merging)
+data <- data %>% select(-ends_with("_raw")) 
+
+#// remove spaces in column names
+colnames(data) <- gsub(" ", "_", colnames(data))
+
+#// remove all NAs in numeric and non-numeric columns
+num_cols <- unname((sapply(data, is.numeric)))
+data[ num_cols][is.na(data[ num_cols])]	 <- 0
+data[!num_cols][is.na(data[!num_cols])]	 <- ""
+rm(num_cols)
+
+#// identify column types
+exp_cols		<- str_sub(colnames(data)[str_detect(colnames(data), "^e\\.")], start = 3, end = -1)
+plate_cols	<- str_sub(colnames(data)[str_detect(colnames(data), "^p\\.")], start = 3, end = -1)
+Well_cols		<- str_sub(colnames(data)[str_detect(colnames(data), "^w\\.")], start = 3, end = -1)
+data_cols		<- str_sub(colnames(data)[str_detect(colnames(data), "^d\\.")], start = 3, end = -1)
+
+#// remove all column prefixes
+colnames(data)[str_detect(colnames(data), "^e\\.|^p\\.|^w\\.|^d\\.")] <- 
+	str_sub(colnames(data)[str_detect(colnames(data), "^e\\.|^p\\.|^w\\.|^d\\.")], start = 3, end = -1)
+
+#// basic info to include in every plot
+#// links analysis output to experiments
+Exp_ID <- unique(data$Experiment_ID)
+cur_date <- Sys.time()
+caption  <- paste("Experiment ID:", Exp_ID, "\nDate:", cur_date)
+
+#// empty plot list and save log
+plots <- vector(mode = "list")
+count <- 0
+save_log <- list()
+
+
+```
+
+This section generally needs to be adjusted for specific data analyses. Examples of manual clean-up are:
+
+-   Renamed or reorder columns
+
+-   Drop unnecessary columns
+
+-   Pivot tables if need be
+
+-   Transform columns into the right datatype (e.g. factors)
+
+-   Remove 'NULL' or NA conditions
+
+-   Sort by desired variables
+
+As QC check the a datatable with the first 384 values is displayed at the end of the chunk.
+
+```{r manual cleanup - part 1}
+
+#// specific for 20201130_AL
+
+#// remove last two columns
+data[ncol(data)] <- NULL
+data[ncol(data)] <- NULL
+
+#// rename last column
+colnames(data)[ncol(data)] <- "IFN-g"
+
+#// adjust data_col names
+data_cols <- data_cols[seq(1:(length(data_cols) - 2))]
+data_cols[length(data_cols)] <- "IFN-g"
+
+
+#// fully assembled and cleaned up dataset
+datatable(head(data, 384), options = list(
+  columnDefs = list(list(className = 'dt-center', targets = 1:ncol(data))),
+  pageLength = 16,
+  lengthMenu = c(8, 16, 96, 384), class = "stripe hover compact",
+  style = "width:100%",
+  scrollX = T)
+)
+
+```
+
+For QC purposes all unique measurements for all Plate_IDs are displayed in plate-based heatmaps.
+
+```{r overview heatmaps, fig.width=16, fig.height=10}
+
+# generate combination of Plate_IDs and data columns for heatmaps
+temp <- expand.grid(data_cols, unique(data$Plate_ID), stringsAsFactors = FALSE)
+
+#// mapply call for QC heatmap plates for all Plate IDs and readouts
+heat_maps <- mapply(plate_heat_map_plot, temp$Var1, temp$Var2, MoreArgs = list(data), SIMPLIFY = FALSE)
+
+#// store QC heatmaps
+save_log[[length(save_log) + 1]] <- pdf_plot(heat_maps, name = paste0("./analysis/", Exp_ID, "_heat_maps"), 16, 10)
+
+#// print heat maps for visualization
+lapply(heat_maps, '(' )
+
+#// clean up
+rm(temp)
+
+```
+
+Secondary cleanup and/or transformation may be necessary after plotting heatmaps. In particular pivoting from wide to
+long dataframes should only be done after the QC plots are generated. Additionally, sometimes columns need to be
+split/mutated to generated identifying information for plots from the prior column names.
+
+```{r manual cleanup - part 2}
+
+#// additional manual data transformation
+#// remove `untreated` wells based on a certain treatment
+data <- data %>% filter(Drug_ID != "NULL")
+
+#// pivot the IncuCyte timecourse
+data <- data %>%
+     pivot_longer(cols = starts_with("hours") , names_to = "time", values_to = "confluence" )
+     
+#// split time into value and unit
+data <- data %>%
+     #// split time into Time_days and Time_unit
+     separate(time, into = c("time_unit", "time"), extra = "drop", remove = T) 
+
+#// convert columns into the right data type
+#// Time should be numeric
+data$time <- as.numeric(data$time)
+
+#// sort by Time, drug concentration
+data <- data %>%
+     arrange(Plate_ID, time, Well_ID)
+
+```
+
+# -----------------------------------------------
+
+# ANALYSIS
+
+Experiment 20201130_AL is a timecourse experiment performed in the IncuCyte with two plates and multiple drugs at a
+dose/response gradient. The plates are divided into four quadrants: sh0 (negative control) / sh2 (ADAR knockdown) &
+without DOX / with DOX. As first analysis, a single drug, then a drug with all doses, and then all drugs at all doses
+(as facets) are plotted.
+
+The DMSO control stands out as not being easy to match across the different treatments.
+
+```{r timecourse, fig.width=16, fig.height=10, warning = FALSE}
+#// analysis developed for 20201130_AL
+
+#// single drug and single dose
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// filter out everything but a single drug to start
+     filter(Drug_ID == "Barasertib") %>%
+     #// filter out everyting but a single concentration
+     filter(Drug_conc == 0.01) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence)) +
+     geom_point() +
+     geom_smooth() +
+     
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with 0.01uM Barasertib", "\nDox = neg") ,
+          caption = caption)
+
+
+
+#// include drug dose response
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// filter out everything but a single drug to start
+     filter(Drug_ID == "Barasertib") %>%
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with dose response of Barasertib", "\nDox = neg") ,
+          caption = caption)
+
+
+
+
+
+#// facet wrap of sh0
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+     #// exclude DMSO from plot
+     filter(Drug_ID != "DMSO") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with dose response of all drugs", "\nDox = neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap("Drug_ID")
+
+
+
+#// facet wrap of sh0
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with dose response of all drugs", "\nDox = neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap("Drug_ID")
+
+
+
+#// DMSO control for both cell lines and +/- DOX
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on DMSO
+     filter(Drug_ID == "DMSO") %>% 
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("DMSO control for both cell lines and +/- DOX"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(DOX_ID ~ Cell_Line_ID)
+
+#// print plots for this section
+for (i in (1 + count):length(plots)) { print(plots[[i]]) }
+count <- length(plots)
+
+
+```
+
+The function `ctrl_propagation()` was generated to propagate controls (everything identified as `!"none"` in
+`<name>_control` ) across the level to be controlled (generally `<name>_ID`. The values in `group_vars` define the
+columns which should be grouped during this process (generally all other independent variables that do not fall into the
+same category as `<name>_ID`. With the control data now duplicated it can be plotted in each facet and independently
+controlled by plotting it as a separate `geom`.
+
+```{r timecourse - w neg ctrls, fig.width=16, fig.height=10, warning = FALSE}
+#// analysis developed for 20201130_AL
+
+#// call DMSO controls across Drug_IDs
+group_vars <- list("Cell_Line_ID", "DOX_ID", "time")
+ctrl_lvl <- c("Drug_ID")
+ctrl_var <- c("Drug_control")
+
+data_ctrl <- ctrl_propagation(data, ctrl_lvl, ctrl_var, group_vars)
+
+
+#// DMSO control for both cell lines and +/- DOX
+
+#// no dox, sh0
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "neg" & Cell_Line_ID == "CT26sh0") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+	#// filter out pos/neg control for main plots
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+		#// setting attributes like linetype in aes means they will be filled with the appropriate value of the variable
+		#// they can be specified in the legend to represent the appropriate values for plotting (e.g. "red", "dashed", ...)
+		#// group within aes means that based on the value of this variable things will be plotted differently
+		#// this setup allows for multiple pos and neg controls as long as they are specified in Drug_control column
+	geom_smooth(data         = . %>% filter(Drug_control == "neg"),
+			  aes(x        = time, 
+			      y        = confluence, 
+			      group    = Drug_control, 
+			      linetype = Drug_control),
+			  color = "red", size = 1.5) +  
+   
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+     #// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh0 / DOX: neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+
+#// dox, sh0
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "pos" & Cell_Line_ID == "CT26sh0") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+	#// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh0 / DOX: pos"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+#// no dox, sh2
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "neg" & Cell_Line_ID == "CT26sh2") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+     
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+     #// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh2 / DOX: neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+#// dox, sh2
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "pos" & Cell_Line_ID == "CT26sh2") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+     
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+     
+	#// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh2 / DOX: pos"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+
+
+#// focus on Ruxolitinib
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on Ruxolitinib
+     filter(Drug_ID == "Ruxlotinib") %>% #// NOTE THAT Ruxolitinib is misspelled in D300 file!
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+     
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides +      
+     #// titles and captions
+     labs(title = paste("Ruxolitinib across CT26sh0 and CT26sh2 with and without DOX"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(DOX_ID ~ Cell_Line_ID)
+
+#// print plots for this section
+for (i in (1 + count):length(plots)) { print(plots[[i]]) }
+count <- length(plots)
+
+
+```
+
+Generate some quick overview plots of the IFN-g response data.
+
+```{r IFN-g overview, fig.width=16, fig.height=10, warning = FALSE}
+#// analysis developed for 20201130_AL
+
+#// IFN response as boxplot across all cell lines and dox
+plots[[length(plots) + 1]] <- data %>% filter(time == 138 ) %>%
+  
+     ggplot(data = data, mapping = aes(x = Drug_ID, y = `IFN-g`, color = Drug_conc)) +
+     geom_boxplot() +
+     geom_point(aes(color = Drug_conc)) +
+     stat_summary(fun = mean, geom = "point") +
+    
+     #// adjust guides and scales
+	scale_col +
+	theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+     
+     #// titles and captions
+     labs(title = paste("IFN-g response at final timepoint") ,
+          caption = caption) +
+    
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(DOX_ID ~ Cell_Line_ID)   
+
+
+#// dose response only for sh2 + DOX
+
+plots[[length(plots) + 1]] <- data %>% filter(time == 138 & DOX_ID == "pos" & Cell_Line_ID == "CT26sh2" & Drug_ID != "DMSO") %>%
+
+  
+     ggplot(data = .) +
+	geom_smooth(mapping = aes(x = Drug_conc, y = `IFN-g`), se = FALSE) +
+     geom_point(mapping = aes(x = Drug_conc, y = `IFN-g`, color = Drug_conc), size = 3) +
+  
+     #// adjust guides and scales
+	scale_col +
+     theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+     scale_x_continuous(trans = 'log10') +
+	
+     #// titles and captions
+     labs(title = paste("IFN-g response at final timepoint") ,
+          caption = caption) +
+    
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap("Drug_ID", scales = "free")  
+
+#// print plots for this section
+for (i in (1 + count):length(plots)) { print(plots[[i]]) }
+count <- length(plots)
+
+
+```
+
+To link the IncuCyte timecourses with the IFN-g response the timecourses need to be summarized with a single value. This
+section converts the timecourses into smoothened timecourses, determines the slopes, and then identifies the maximum
+slope value as the level of suppression of any given drug at a given dose by cell line and DOX treatment. This value can
+then be plotted against the IFN-g values.
+
+Here, there seems to be little correlation between IFN-g and slope. However, statistical analysis could include linear
+regression of correlation analysis (see analysis of mouse asthma data).
+
+```{r timecourse smoothing, fig.width=16, fig.height=10, warning = FALSE}
+#// analysis developed for 20201130_AL
+
+#// takes IncuCyte time course
+#// extrapolates smoothened timecourse
+#// determines slope and propagates max slope across all timepoints
+#// summarizes dataframe to match up single max slope with IFN resposne
+
+#// nest data to unit of time series smoothing (time vs. confluence)
+data_slope <- data %>% group_by(Cell_Line_ID, Drug_ID, Drug_conc, DOX_ID) %>% nest() %>%
+     #// generate new column with results of supersmooth function
+     mutate(smooth = map(data, function(.x) {supsmu(.x$time, .x$confluence) } )) %>%
+     #// turn smooth into a dataframe
+     mutate(smooth = map(smooth, data.frame)) %>%
+     #// add column with slope (wonder if this can be done more elegantly?)
+     mutate(slope = map(smooth, function(.x) { 
+                    x_val <- .x$x
+                    y_val <- .x$y
+                    slope <- (y_val - lag(y_val)) / (x_val - lag(x_val))
+                    max   <- max(slope[!is.na(slope)])
+                    return(data.frame(x_val, slope, max)) } )) %>%
+     #// join smoothened and slope data
+     mutate(joined = map2(smooth, slope, function(.x, .y) { full_join(.x, .y,  by = c("x" = "x_val")) } )) %>%
+     #// join smoothened/slope data and original data
+     mutate(joined = map2(data,  joined, function(.x, .y) { full_join(.x, .y,  by = c("time" = "x")) } )) %>%
+     #// remove temporary columns
+     select(-data, -smooth, -slope) %>%
+     #// unnest the whole thing
+     unnest(cols = c(joined))
+
+#// plot to show process
+plots[[length(plots) + 1]] <- data_slope %>% 
+	
+	#// data manipulations
+     #// filter out everything but a single drug to start
+     filter(Drug_ID == "Camptothecin") %>%
+	#// single dose of drug
+	filter(Drug_conc > 0.05 & Drug_conc < 0.1) %>% 
+#     #// exclude t=0 because of artifacts
+#     filter(time != 0) %>%
+
+	ggplot(data = .) + 
+	
+     geom_point(aes(x = time, y = confluence), color = "black") +
+	
+	geom_point(aes(x = time, y = y), color = "red") +
+     geom_smooth(aes(x = time, y = y), color = "red", se = FALSE) +
+ 
+	geom_point(data = . %>% filter(slope >= 0), aes(x = time, y = 50*slope), color = "green") +
+     geom_smooth(data = . %>% filter(slope >= 0), aes(x = time, y = 50*slope), color = "green", se = FALSE) +
+     
+	#// titles and captions
+     labs(title = paste("Confluence, smoothened curve, and slope for Camptothecin at ~0.05uM") ,
+          caption = caption) +
+    
+	facet_grid(DOX_ID ~ Cell_Line_ID) 
+
+
+#// as above, but now completes the process be...
+#// summarizing dataframe to match up single max slope with IFN resposne
+
+#// nest data to unit of time series smoothing (time vs. confluence)
+data_slope <- data %>% group_by(Cell_Line_ID, Drug_ID, Drug_conc, DOX_ID) %>% nest() %>%
+     #// generate new column with results of supersmooth function
+     mutate(smooth = map(data, function(.x) {supsmu(.x$time, .x$confluence) } )) %>%
+     #// turn smooth into a dataframe
+     mutate(smooth = map(smooth, data.frame)) %>%
+     #// add column with slope (wonder if this can be done more elegantly?)
+     mutate(slope = map(smooth, function(.x) { 
+                    x_val <- .x$x
+                    y_val <- .x$y
+                    slope <- (y_val - lag(y_val)) / (x_val - lag(x_val))
+                    max   <- max(slope[!is.na(slope)])
+                    return(data.frame(x_val, slope, max)) } )) %>%
+     #// join smoothened and slope data
+     mutate(joined = map2(smooth, slope, function(.x, .y) { full_join(.x, .y,  by = c("x" = "x_val")) } )) %>%
+     #// join smoothened/slope data and original data
+     mutate(joined = map2(data,  joined, function(.x, .y) { full_join(.x, .y,  by = c("time" = "x")) } )) %>%
+     #// remove temporary columns
+     select(-data, -smooth, -slope) %>%
+     #// unnest the whole thing
+     unnest(cols = c(joined)) %>%
+     #// group relevant parameters to summarize (all but time which is identical now)
+     group_by(Cell_Line_ID, Drug_ID, Drug_conc, DOX_ID) %>%
+     #// summarize max slope and ifn-g by time
+     summarize(`IFN-g` = max(`IFN-g`), slope = max(max)) %>%
+     #// filter out Drug_conc lower than 0
+     filter(!Drug_conc <= 0)
+     
+
+# plot as dose response by drug_ID, conc 
+
+plots[[length(plots) + 1]] <- 
+	
+	ggplot(data = data_slope, aes(x = Drug_conc, y = slope, color = Drug_ID)) +
+     geom_point() +
+     geom_smooth(aes(), se = FALSE) +
+     facet_grid(DOX_ID ~ Cell_Line_ID) +
+     scale_x_continuous(trans = 'log2') +
+     scale_y_continuous(trans = 'log2') +
+		#// titles and captions
+     labs(title = paste("Dose response is a little bell-shaped") ,
+          caption = caption)
+
+# plot correlation x/y
+
+plots[[length(plots) + 1]] <- 
+
+	ggplot(data = data_slope, aes(x = `IFN-g`, y = slope, color = Drug_ID)) +
+     geom_point() +
+     scale_x_continuous(trans = 'log2') +
+     scale_y_continuous(trans = 'log2') +
+	
+	labs(title = paste("No clear correlation with growth inhibition and IFN release") ,
+          caption = caption)
+
+#// filter on sh2 + DOX only
+#// bin drug concentrations for better overview
+
+plots[[length(plots) + 1]] <- 
+
+     data_slope %>% filter(DOX_ID == "pos" & Cell_Line_ID == "CT26sh2") %>% 
+	mutate(conc = case_when((Drug_conc < 20   & Drug_conc >= 1   ) ~ "1_high",
+					    (Drug_conc < 1    & Drug_conc >= 0.1 ) ~ "2_med",
+					    (Drug_conc < 0.1  & Drug_conc >= 0.01) ~ "3_low",
+					    (Drug_conc < 0.01				   ~ "4_very low"))) %>%   
+	ggplot(data = .) + 
+     geom_point(aes(x = `IFN-g`, y = slope, color = Drug_ID, shape = conc), size = 3) +
+	geom_smooth(aes(x = `IFN-g`, y = slope)) +
+     scale_x_continuous(trans = 'log2') +
+     scale_y_continuous(trans = 'log2') +
+	
+	labs(title = paste("Maybe a correlation if only considering DOX pos / CT26sh2?") ,
+          caption = caption)
+
+#// print out all plots into summary pdf
+
+save_log[[length(save_log) + 1]] <- pdf_plot(plots, name = paste0("./analysis/", Exp_ID, "_summary_plots"), width = 16, height = 10) 
+
+#// print plots for this section
+for (i in (1 + count):length(plots)) { print(plots[[i]]) }
+count <- length(plots)
+
+
+```
+
+Generate a final report based on the `save_log` to verify if analysis got saved.
+
+```{r final report}
+
+#// global QC output
+save_log <- as.data.frame(bind_cols(date = cur_date, bind_rows(save_log))) 
+
+print(cur_date)
+
+for (i in 1:nrow(save_log)) {
+	print(paste(save_log[[i, 2]], "saved:", save_log[[i, 3]]))
+	}
+
+print("Script completed successfully.")
+
+```
+
+# -----------------------------------------------
+
+#/// APPENDIX ///
+
+Keep collecting these chunks and use the fragments later as a 'menu' for starting points of analysis
+
+# -----------------------------------------------
+# general
+
+```{r source_analysis_functions, eval=FALSE, include=FALSE}
+
+#// source data_assembly functions
+knitr::purl("data_analysis_v04.Rmd", output = "analysis_functions.R")
+
+```
+
+```{r export to PRISM, eval=FALSE, include=FALSE}
+#// developed for 20201218_JM
+
+#// PRISM export
+export <- data %>% 
+	#// select only the columns of interest
+	select(CRISPR_ID, treatment_ID, CTG, Cell_Line_ID) %>% 
+	#// filter out data not needed
+	filter() %>% 
+	#// group by variable to be placed into different files
+	group_by(CRISPR_ID, treatment_ID, Cell_Line_ID) %>% 
+	#// append number to name for repeats to future columns
+	mutate(treatment_ID = paste0(treatment_ID, ".", row_number() )) %>% 
+	#// ungroup and regroup on variable for different file export
+	ungroup() %>% group_by(Cell_Line_ID) %>% 
+	#// create sub_dataframe
+	nest() %>%
+	#// pivot nested dataframes
+	mutate(data = map(data, function(x) { 
+		pivot_wider(x, id_cols = CRISPR_ID, names_from = treatment_ID, values_from = CTG) } )) %>% 
+	#// clean up column names
+	mutate(data = map(data, function(x) {
+		colnames(x) <- str_remove(colnames(x), "\\.[:digit:]$")
+		return(x) } )) 
+
+#// write data as csv	
+map2(export$data, export$Cell_Line_ID, function(x, y) {
+		write_csv(x, paste0("./out_data/", Exp_ID, "_PRISM_", y, ".csv")) } ) 
+
+
+
+```
+
+\#\_\_\_\_\_\_\_\_\_\_\_\_ \# 20201218_JM
+
+```{r 20201218_JM_quick overview, eval=FALSE, include=FALSE}
+#// analysis generated for 20201218_JM
+#// overview plot
+
+#// call custom_box_plot function
+#// pipe in datafram modified through dplyr pipe
+plots[[length(plots) + 1]] <- data %>%
+
+				#// dataframe from dplyr pipe
+cust_boxplot(df     = ., 
+          		#// variable for x-axis
+		    x_val  = "CRISPR_ID",
+          		#// variable for y-axis              
+		    y_val  = "CTG",
+          		#// variable for color              
+		    color  = "CRISPR_ID",
+          		#// variable for facet row
+		    r_fac  = "Cell_Line_ID", 
+          		#// variable for facet column
+		    c_fac  = "treatment_ID",
+				#// title of plot
+		    title  = "Overview of CTG vs. CRISPR")
+
+#// overview plots normalized
+
+plots[[length(plots) + 1]] <-
+
+data %>% group_by(treatment_ID, Cell_Line_ID) %>%
+     mutate(CTG_norm = CTG/mean(CTG[CRISPR_ID == "NC_pooled"])) %>%
+
+cust_boxplot(df     = ., 
+              x_val  = "CRISPR_ID",
+              y_val  = "CTG_norm",
+              color  = "CRISPR_ID",
+              r_fac  = "Cell_Line_ID", 
+              c_fac  = "treatment_ID",
+              title  = "Overview of normalized CTG vs. CRISPR")    
+ 
+pdf_plot(plots, name = paste0(Exp_ID, "_summary_plots"), width = 16, height = 10) 
+
+```
+
+```{r 20201218_JM_propagate pos and neg ctrls, eval=FALSE, include=FALSE}
+#// analysis generated for 20201218_JM
+
+#// propagate CRISPR controls
+#// each CRISPR_ID will have positive (lethal) and negative (NC) control data
+
+#// parameters
+
+#// grouping variables that will get the propagation of the controls
+group_vars <- list("Cell_Line_ID", "treatment_ID", "treatment_ctrl")
+#// variable that will be propagated across all groups
+ctrl_lvl   <- c("CRISPR_ID")
+#// variable that indivates positve and negative controls for ctrl_lvl
+ctrl_var   <- c("CRISPR_ctrl")
+#// call of function
+data_ctrl  <- ctrl_propagation(data, ctrl_lvl, ctrl_var, group_vars)
+
+#// sanitity check that propagation worked
+#// plot of mPARP7 across cell lines and treatments
+#// normalized against NC CRISPR pooled
+#// each facet plots positive and negative controls
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+     #// filter a single CRISPR condition
+     #// set this up with lapply later
+     filter(CRISPR_ID == "mPARP7_pooled") %>% 
+     
+     #// group_by faceting variables
+     group_by(treatment_ID, Cell_Line_ID) %>%
+
+     #// control against negative control in each facet
+     mutate(CTG_norm = CTG/mean(CTG[CRISPR_ctrl == "neg"])) %>%
+
+     cust_boxplot(df     = ., 
+                  x_val  = "CRISPR_ID",
+                  y_val  = "CTG_norm",
+                  color  = "CRISPR_ctrl",
+                  r_fac  = "Cell_Line_ID", 
+                  c_fac  = "treatment_ID",
+                  title  = "mPARP7_pooled")
+
+
+
+```
+
+```{r 20201218_JM_purrr plots with pos/neg ctrl, eval=FALSE, include=FALSE}
+#// analysis generated for 20201218_JM
+
+
+#// generate cust_boxplot for each CRISPR_ID with all relevant controls
+#// normalize across treatment_ID and Cell_Line_ID
+#// nest by CRISPR_ID
+#// generate plots using purrr::map for raw and normalized CTG
+norm_plot_df <- data_ctrl %>% 
+     #// group_by faceting variables
+     group_by(treatment_ID, Cell_Line_ID) %>%
+     #// control against negative control in each facet
+     mutate(CTG_norm = CTG / mean(CTG[CRISPR_ctrl == "neg"])) %>%
+     #// group by condition to plot against
+     group_by(CRISPR_ID) %>%
+     #// create nested list with all relevant information 
+     nest() %>%
+     #// apply function to generate plot with map
+     mutate(plots = map2(data, CRISPR_ID, function(.x, .y) {
+     								  cust_boxplot(df     = .x, 
+               									x_val  = "CRISPR_ctrl",
+               									y_val  = "CTG",
+               									color  = "CRISPR_ctrl",
+               									r_fac  = "Cell_Line_ID", 
+               									c_fac  = "treatment_ID",
+               									title  = .y) } ) )		 %>%
+	#// apply function to generate plot with map
+     mutate(norm_plots = map2(data, CRISPR_ID, function(.x, .y) {
+     								  cust_boxplot(df     = .x, 
+               									x_val  = "CRISPR_ctrl",
+               									y_val  = "CTG_norm",
+               									color  = "CRISPR_ctrl",
+               									r_fac  = "Cell_Line_ID", 
+               									c_fac  = "treatment_ID",
+               									title  = .y) } ) )	
+
+#// readout plots from dataframe
+pdf_plot(append(norm_plot_df$plots, norm_plot_df$norm_plots),
+	    name = paste0(Exp_ID, "_normalized_plots"),
+	    width = 16,
+	    height = 10) 
+
+stop()
+
+
+
+```
+
+# -----------------------------------------------
+
+# 20201130_AL
+
+```{r 20201130_AL_timecourse, eval=FALSE, fig.height=10, fig.width=16, include=FALSE}
+#// analysis developed for 20201130_AL
+
+#// single drug and single dose
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// filter out everything but a single drug to start
+     filter(Drug_ID == "Barasertib") %>%
+     #// filter out everyting but a single concentration
+     filter(Drug_conc == 0.01) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence)) +
+     geom_point() +
+     geom_smooth() +
+     
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with 0.01uM Barasertib", "\nDox = neg") ,
+          caption = caption)
+
+
+
+#// include drug dose response
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// filter out everything but a single drug to start
+     filter(Drug_ID == "Barasertib") %>%
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with dose response of Barasertib", "\nDox = neg") ,
+          caption = caption)
+
+
+
+
+
+#// facet wrap of sh0
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+     #// exclude DMSO from plot
+     filter(Drug_ID != "DMSO") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with dose response of all drugs", "\nDox = neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap("Drug_ID")
+
+
+
+#// facet wrap of sh0
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// filter out everything but a single cell line to start
+     filter(Cell_Line_ID == "CT26sh0") %>%
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on no_DOX treatment
+     filter(DOX_ID == "neg") %>%
+
+#// plot generation
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("CT26sh0 treated with dose response of all drugs", "\nDox = neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap("Drug_ID")
+
+
+
+#// DMSO control for both cell lines and +/- DOX
+plots[[length(plots) + 1]] <- data %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on DMSO
+     filter(Drug_ID == "DMSO") %>% 
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(aes(x = time, y = confluence, color = Drug_conc)) +
+     geom_point() +
+     geom_smooth(aes(group = Drug_conc)) +
+     #// adjust guides and scales
+     scale_col + scale_x +
+     #// titles and captions
+     labs(title = paste("DMSO control for both cell lines and +/- DOX"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(DOX_ID ~ Cell_Line_ID)
+
+
+
+```
+
+```{r 20201130_AL_timecourse - w neg ctrls, eval=FALSE, fig.height=10, fig.width=16, include=FALSE}
+#// analysis developed for 20201130_AL
+
+#// call DMSO controls across Drug_IDs
+group_vars <- list("Cell_Line_ID", "DOX_ID", "time")
+ctrl_lvl <- c("Drug_ID")
+ctrl_var <- c("Drug_control")
+
+data_ctrl <- ctrl_propagation(data, ctrl_lvl, ctrl_var, group_vars)
+
+
+#// DMSO control for both cell lines and +/- DOX
+
+#// no dox, sh0
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "neg" & Cell_Line_ID == "CT26sh0") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+	#// filter out pos/neg control for main plots
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+		#// setting attributes like linetype in aes means they will be filled with the appropriate value of the variable
+		#// they can be specified in the legend to represent the appropriate values for plotting (e.g. "red", "dashed", ...)
+		#// group within aes means that based on the value of this variable things will be plotted differently
+		#// this setup allows for multiple pos and neg controls as long as they are specified in Drug_control column
+	geom_smooth(data         = . %>% filter(Drug_control == "neg"),
+			  aes(x        = time, 
+			      y        = confluence, 
+			      group    = Drug_control, 
+			      linetype = Drug_control),
+			  color = "red", size = 1.5) +  
+   
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+     #// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh0 / DOX: neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+
+#// dox, sh0
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "pos" & Cell_Line_ID == "CT26sh0") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+	#// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh0 / DOX: pos"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+#// no dox, sh2
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "neg" & Cell_Line_ID == "CT26sh2") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+     
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+     #// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh2 / DOX: neg"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+#// dox, sh2
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     filter(DOX_ID == "pos" & Cell_Line_ID == "CT26sh2") %>%
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+     
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides + 
+     
+	#// titles and captions
+     labs(title = paste("All conditions with all appropriate DMSO controls propagated to each plot.\nCell Line: CT26sh2 / DOX: pos"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(vars(Drug_ID), ncol = 3)
+
+
+
+
+#// focus on Ruxolitinib
+plots[[length(plots) + 1]] <- data_ctrl %>%
+     
+#// data manipulations
+     #// exclude t=0 because of artifacts
+     filter(time != 0) %>%
+     #// filter only on Ruxolitinib
+     filter(Drug_ID == "Ruxlotinib") %>% #// NOTE THAT Ruxolitinib is misspelled in D300 file!
+
+#// plot generation     
+     #// basic plot elements
+     ggplot(data = .) +
+     #// plot the drug results
+     geom_smooth(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     geom_point(data = . %>% filter(Drug_control == "none"), aes(x = time, y = confluence, group = Drug_conc, color = Drug_conc)) +
+     #// plot the controls
+     geom_smooth(data = . %>% filter(Drug_control == "neg"), aes(x = time, y = confluence, group = Drug_control, linetype = Drug_control), color = "red", size = 1.5) +  
+     
+     #// adjust guides and scales
+     scale_col + scale_x + scale_lt + guides +      
+     #// titles and captions
+     labs(title = paste("Ruxolitinib across CT26sh0 and CT26sh2 with and without DOX"),
+          caption = caption) +
+     
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(DOX_ID ~ Cell_Line_ID)
+
+
+
+```
+
+```{r 20201130_AL_IFN-g overview, eval=FALSE, fig.height=10, fig.width=16, include=FALSE}
+#// analysis developed for 20201130_AL
+
+#// IFN response as boxplot across all cell lines and dox
+plots[[length(plots) + 1]] <- data %>% filter(time == 138 ) %>%
+  
+     ggplot(data = data, mapping = aes(x = Drug_ID, y = `IFN-g`, color = Drug_conc)) +
+     geom_boxplot() +
+     geom_point(aes(color = Drug_conc)) +
+     stat_summary(fun = mean, geom = "point") +
+    
+     #// adjust guides and scales
+	scale_col +
+	theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+     
+     #// titles and captions
+     labs(title = paste("IFN-g response at final timepoint") ,
+          caption = caption) +
+    
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap(DOX_ID ~ Cell_Line_ID)   
+
+
+#// dose response only for sh2 + DOX
+
+plots[[length(plots) + 1]] <- data %>% filter(time == 138 & DOX_ID == "pos" & Cell_Line_ID == "CT26sh2" & Drug_ID != "DMSO") %>%
+
+  
+     ggplot(data = .) +
+	geom_smooth(mapping = aes(x = Drug_conc, y = `IFN-g`), se = FALSE) +
+     geom_point(mapping = aes(x = Drug_conc, y = `IFN-g`, color = Drug_conc), size = 3) +
+  
+     #// adjust guides and scales
+	scale_col +
+     theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+     scale_x_continuous(trans = 'log10') +
+	
+     #// titles and captions
+     labs(title = paste("IFN-g response at final timepoint") ,
+          caption = caption) +
+    
+     #// display remainder of variables in face_wrap or facet_grid
+     facet_wrap("Drug_ID", scales = "free")  
+
+
+
+```
+
+```{r 20201130_AL_timecourse smoothing, eval=FALSE, include=FALSE}
+#// analysis developed for 20201130_AL
+
+#// takes IncuCyte time course
+#// extrapolates smoothened timecourse
+#// determines slope and propagates max slope across all timepoints
+#// summarizes dataframe to match up single max slope with IFN resposne
+
+#// nest data to unit of time series smoothing (time vs. confluence)
+data_slope <- data %>% group_by(Cell_Line_ID, Drug_ID, Drug_conc, DOX_ID) %>% nest() %>%
+     #// generate new column with results of supersmooth function
+     mutate(smooth = map(data, function(.x) {supsmu(.x$time, .x$confluence) } )) %>%
+     #// turn smooth into a dataframe
+     mutate(smooth = map(smooth, data.frame)) %>%
+     #// add column with slope (wonder if this can be done more elegantly?)
+     mutate(slope = map(smooth, function(.x) { 
+                    x_val <- .x$x
+                    y_val <- .x$y
+                    slope <- (y_val - lag(y_val)) / (x_val - lag(x_val))
+                    max   <- max(slope[!is.na(slope)])
+                    return(data.frame(x_val, slope, max)) } )) %>%
+     #// join smoothened and slope data
+     mutate(joined = map2(smooth, slope, function(.x, .y) { full_join(.x, .y,  by = c("x" = "x_val")) } )) %>%
+     #// join smoothened/slope data and original data
+     mutate(joined = map2(data,  joined, function(.x, .y) { full_join(.x, .y,  by = c("time" = "x")) } )) %>%
+     #// remove temporary columns
+     select(-data, -smooth, -slope) %>%
+     #// unnest the whole thing
+     unnest(cols = c(joined))
+
+#// plot to show process
+plots[[length(plots) + 1]] <- data_slope %>% 
+	
+	#// data manipulations
+     #// filter out everything but a single drug to start
+     filter(Drug_ID == "Camptothecin") %>%
+	#// single dose of drug
+	filter(Drug_conc > 0.05 & Drug_conc < 0.1) %>% 
+#     #// exclude t=0 because of artifacts
+#     filter(time != 0) %>%
+
+	ggplot(data = .) + 
+	
+     geom_point(aes(x = time, y = confluence), color = "black") +
+	
+	geom_point(aes(x = time, y = y), color = "red") +
+     geom_smooth(aes(x = time, y = y), color = "red", se = FALSE) +
+ 
+	geom_point(data = . %>% filter(slope >= 0), aes(x = time, y = 50*slope), color = "green") +
+     geom_smooth(data = . %>% filter(slope >= 0), aes(x = time, y = 50*slope), color = "green", se = FALSE) +
+     
+	#// titles and captions
+     labs(title = paste("Confluence, smoothened curve, and slope for Camptothecin at ~0.05uM") ,
+          caption = caption) +
+    
+	facet_grid(DOX_ID ~ Cell_Line_ID) 
+
+
+#// as above, but now completes the process be...
+#// summarizing dataframe to match up single max slope with IFN resposne
+
+#// nest data to unit of time series smoothing (time vs. confluence)
+data_slope <- data %>% group_by(Cell_Line_ID, Drug_ID, Drug_conc, DOX_ID) %>% nest() %>%
+     #// generate new column with results of supersmooth function
+     mutate(smooth = map(data, function(.x) {supsmu(.x$time, .x$confluence) } )) %>%
+     #// turn smooth into a dataframe
+     mutate(smooth = map(smooth, data.frame)) %>%
+     #// add column with slope (wonder if this can be done more elegantly?)
+     mutate(slope = map(smooth, function(.x) { 
+                    x_val <- .x$x
+                    y_val <- .x$y
+                    slope <- (y_val - lag(y_val)) / (x_val - lag(x_val))
+                    max   <- max(slope[!is.na(slope)])
+                    return(data.frame(x_val, slope, max)) } )) %>%
+     #// join smoothened and slope data
+     mutate(joined = map2(smooth, slope, function(.x, .y) { full_join(.x, .y,  by = c("x" = "x_val")) } )) %>%
+     #// join smoothened/slope data and original data
+     mutate(joined = map2(data,  joined, function(.x, .y) { full_join(.x, .y,  by = c("time" = "x")) } )) %>%
+     #// remove temporary columns
+     select(-data, -smooth, -slope) %>%
+     #// unnest the whole thing
+     unnest(cols = c(joined)) %>%
+     #// group relevant parameters to summarize (all but time which is identical now)
+     group_by(Cell_Line_ID, Drug_ID, Drug_conc, DOX_ID) %>%
+     #// summarize max slope and ifn-g by time
+     summarize(`IFN-g` = max(`IFN-g`), slope = max(max)) %>%
+     #// filter out Drug_conc lower than 0
+     filter(!Drug_conc <= 0)
+     
+
+# plot as dose response by drug_ID, conc 
+
+plots[[length(plots) + 1]] <- 
+	
+	ggplot(data = data_slope, aes(x = Drug_conc, y = slope, color = Drug_ID)) +
+     geom_point() +
+     geom_smooth(aes(), se = FALSE) +
+     facet_grid(DOX_ID ~ Cell_Line_ID) +
+     scale_x_continuous(trans = 'log2') +
+     scale_y_continuous(trans = 'log2') +
+		#// titles and captions
+     labs(title = paste("Dose response is a little bell-shaped") ,
+          caption = caption)
+
+# plot correlation x/y
+
+plots[[length(plots) + 1]] <- 
+
+	ggplot(data = data_slope, aes(x = `IFN-g`, y = slope, color = Drug_ID)) +
+     geom_point() +
+     scale_x_continuous(trans = 'log2') +
+     scale_y_continuous(trans = 'log2') +
+	
+	labs(title = paste("No clear correlation with growth inhibition and IFN release") ,
+          caption = caption)
+
+#// filter on sh2 + DOX only
+
+plots[[length(plots) + 1]] <- 
+
+     data_slope %>% filter(DOX_ID == "pos" & Cell_Line_ID == "CT26sh2") %>% 
+	mutate(conc = case_when((Drug_conc < 20   & Drug_conc >= 1   ) ~ "1_high",
+					    (Drug_conc < 1    & Drug_conc >= 0.1 ) ~ "2_med",
+					    (Drug_conc < 0.1  & Drug_conc >= 0.01) ~ "3_low",
+					    (Drug_conc < 0.01				   ~ "4_very low"))) %>%   
+	ggplot(data = .) + 
+     geom_point(aes(x = `IFN-g`, y = slope, color = Drug_ID, shape = conc), size = 3) +
+	geom_smooth(aes(x = `IFN-g`, y = slope)) +
+     scale_x_continuous(trans = 'log2') +
+     scale_y_continuous(trans = 'log2') +
+	
+	labs(title = paste("Maybe a correlation if only considering DOX pos / CT26sh2?") ,
+          caption = caption)
+
+#// print out all plots into summary pdf
+
+pdf_plot(plots, name = paste0(Exp_ID, "_summary_plots"), width = 16, height = 10) 
+
+stop()
+```
+
+# -----------------------------------------------
+
+# 20200908_AL
+
+```{r 20200908_AL_basic plots, eval=FALSE, include=FALSE}
+
+#// analysis developed for 20200908_AL (stressor screen)
+
+#// trying out different scales and different x/y combinations to explore data
+
+d1 <- data
+
+d1 %>% filter(Cell_Line == "A375") %>%
+
+    ggplot(aes(x = drug_conc, y= Cell_No, color = drug_ID)) +
+    geom_line() +
+    stat_summary(fun = mean, geom = "point") +
+    stat_summary(fun = mean, geom = "line") + 
+    facet_wrap( ~ drug_ID, ncol=3) +
+    theme(axis.text.x = element_text(angle = 90))
+ 
+
+#// not normalized
+
+d1 %>% group_by(Cell_Line) %>%  mutate(Cell_No_norm = Cell_No/mean(Cell_No[drug_ID=="DMSO"])) %>%
+    
+    filter(drug_ID != "DMSO" & drug_ID != "Staurosporin") %>%
+
+    ggplot(aes(x = drug_ID, y = Cell_No)) +
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") +
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+d1 %>% group_by(Cell_Line) %>%  mutate(Fraction_W2_norm = Fraction_W2/mean(Fraction_W2[drug_ID=="DMSO"])) %>%
+
+    ggplot(aes(x = drug_ID, y= Fraction_W2)) +
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") +
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+d1 %>% group_by(Cell_Line) %>%  mutate(Fraction_W3_norm = Fraction_W3/mean(Fraction_W3[drug_ID=="DMSO"])) %>%
+
+    ggplot(aes(x = drug_ID, y = Fraction_W3)) +
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") +
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#// normalized
+
+
+d1 %>% group_by(Cell_Line) %>%  mutate(Cell_No_norm = Cell_No/mean(Cell_No[drug_ID=="DMSO"])) %>%
+    
+    filter(drug_ID != "DMSO" & drug_ID != "Staurosporin") %>%
+
+    ggplot(aes(x = drug_ID, y = Cell_No_norm)) +
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") +
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+d1 %>% group_by(Cell_Line) %>%  mutate(Fraction_W2_norm = Fraction_W2/mean(Fraction_W2[drug_ID=="DMSO"])) %>%
+
+    ggplot(aes(x = drug_ID, y= Fraction_W2_norm)) +
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") +
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+d1 %>% group_by(Cell_Line) %>%  mutate(Fraction_W3_norm = Fraction_W3/mean(Fraction_W3[drug_ID=="DMSO"])) %>%
+
+    ggplot(aes(x = drug_ID, y = Fraction_W3_norm)) +
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") +
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+
+```
+
+```{r 20200908_AL_lapply plots, eval=FALSE, fig.height=12, fig.width=16, include=FALSE}
+
+#// analysis developed for 20200908_AL (stressor screen)
+
+#// log_scale W2 norm
+
+log_plot <- d1 %>%
+  
+    group_by(Cell_Line) %>%  mutate(Fraction_W2_norm = Fraction_W2/mean(Fraction_W2[drug_ID=="DMSO"])) %>%
+
+    ggplot(aes(x = drug_ID, y = Fraction_W2_norm)) +
+    scale_y_log10(limits = c(0.5, 80), breaks = c(1, 3.16, 10, 31.6)) +
+    
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") +
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = paste("Readout:", " Fraction_W2_norm"),
+    caption = paste("Experiment ID:", Exp_ID))
+
+
+
+
+#// normalize all by DMSO
+
+data_norm <- data %>%   group_by(Cell_Line) %>%
+                        mutate(Cell_No_norm = Cell_No/mean(Cell_No[drug_ID=="DMSO"])) %>%
+                        mutate(Fraction_W2_norm = Fraction_W2/mean(Fraction_W2[drug_ID=="DMSO"])) %>%
+                        mutate(Fraction_W3_norm = Fraction_W3/mean(Fraction_W3[drug_ID=="DMSO"]))
+
+   
+
+#// This lapply replaces the individual calls across all readouts for a single antibody
+ 
+readout_plot <- function(readout, data) { 
+
+
+    data %>% group_by(Cell_Line) %>%  mutate(Cell_No_norm = Cell_No/mean(Cell_No[drug_ID=="DMSO"])) %>%
+    
+    filter(drug_ID != "DMSO" & drug_ID != "Staurosporin") %>%
+
+    ggplot(aes_string(x = "drug_ID", y = readout)) +
+    geom_boxplot() +
+    geom_point(aes(color=drug_conc)) +
+    
+    scale_color_viridis_d(begin = 1, end = 0, alpha = 1, direction = 1, na.value = "gray") + 
+    
+    stat_summary(fun = mean, geom = "point") +
+    facet_wrap( ~ Cell_Line, ncol=3) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = paste("Readout:", readout),
+    caption = paste("Experiment ID:", Exp_ID))
+    
+}    
+
+
+
+readouts <- c("Cell_No", "Fraction_W2", "Fraction_W3", "Cell_No_norm", "Fraction_W2_norm", "Fraction_W3_norm")
+plots <- lapply(readouts, readout_plot, data_norm)
+ 
+print ( ( plots[[1]] + plots[[2]] + plots[[3]] ) / ( plots[[4]] + plots[[5]]  + plots[[6]] ) + plot_layout(guides = 'collect') )
+
+print( log_plot)
+
+
+
+
+```
+
+```{r 20200908_AL_PDF of patch plot, eval=FALSE, fig.height=12, fig.width=16, include=FALSE}
+
+
+#// analysis developed for 20200908_AL (stressor screen)
+
+#// using patchwork for layout and print a pdf
+
+
+
+pdf(file = paste0(out_dir, out_file, ".pdf"),   #// The directory you want to save the file in
+    width = 16, #// The width of the plot in inches
+    height = 12) #// The height of the plot in inches
+
+#// single page with six plots
+print( ( plots[[1]] + plots[[2]] + plots[[3]] ) / ( plots[[4]] + plots[[5]]  + plots[[6]] ) + plot_layout(guides = 'collect') )
+
+#// y log scale
+print( log_plot)
+
+#// one plot per page
+for (i in 1:6) { ( print(plots[[i]]) ) } 
+
+dev.off()
+invisible(NULL)
+
+
+
+
+```
+
+# -----------------------------------------------
+
+# 20201203_BG_INFg
+
+```{r 20201203_BG_INFg_basic plots, eval=FALSE, include=FALSE}
+
+#// analysis developed for 20201203_BG_INFg treatments
+
+#// trying out different scales and different x/y combinations to explore data
+
+d1 <- data
+
+ggplot(data=d1, aes(Time_days, Cell_No, color = cytokine_conc, group = cytokine_conc, shape = Cell_Line, group = Cell_Line)) +
+          geom_point() +
+          stat_summary(fun = mean, geom = "point") +
+          stat_summary(fun = mean, geom = "line") + 
+          facet_wrap( ~ Cell_Line, ncol=3)
+          
+ggplot(data=d1, aes(x=Time_days, y=Cyto_W3 , color = Cell_Line, group = Cell_Line)) +
+          xlim(0.1, 500) +
+#//          ylim(0, 1000) +      
+#//          scale_x_continuous(trans=scales::pseudo_log_trans(base = 2)) +
+          scale_x_continuous(trans='log2') +
+          geom_point() +
+          stat_summary(fun = mean, geom = "point") +
+          stat_summary(fun = mean, geom = "line") + 
+          facet_grid(antibody_ID ~ cytokine_conc)
+
+          
+ggplot(data=d1, aes(x=Time_days, y=Cyto_W3 , color = cytokine_conc, group = cytokine_conc)) +
+ #//        xlim(0.1, 500) +
+#//          ylim(0, 1000) +      
+#//          scale_x_continuous(trans=scales::pseudo_log_trans(base = 2)) +
+ #//         scale_x_continuous(trans='log2') +
+          geom_point() +
+          stat_summary(fun = mean, geom = "point") +
+          stat_summary(fun = mean, geom = "line") + 
+          facet_grid(antibody_ID ~ Cell_Line)
+
+ggplot(data=d1, aes(x=as.factor(cytokine_conc), y=Cell_W3 , color = drug_ID)) +
+ #//         xlim(0.1, 500) +
+#//          ylim(0, 1000) +      
+#//          scale_x_continuous(trans=scales::pseudo_log_trans(base = 2)) +
+ #//         scale_x_continuous(trans='log2') +
+          geom_boxplot() +
+          facet_grid(Cell_Line ~ Time_days)
+
+
+
+
+
+```
+
+```{r 20201203_BG_INFg_lapply antibodies, eval=FALSE, include=FALSE}
+
+#// analysis developed for 20201203_BG_INFg treatments
+
+#// testing ground/template for antibody_plot function
+
+     #// data %>%
+     #// filter(antibody_ID=="PARP14") %>%
+     #// ggplot(aes(x=as.factor(cytokine_conc), y=Cell_W3 , color = drug_ID)) +
+     #// geom_boxplot() +
+     #// facet_grid(Cell_Line ~ Time_days) + 
+     #// labs(title=paste("Antibody:", "PARP14"))
+
+#// function that cycles through all antibodies in 'antibody' column
+#// uses filter to only select a single Ab
+#// plots the readout for a single readout (Cell_W3)
+ 
+     antibody_plot <- function(filter, data) {
+
+     data %>%
+     filter(antibody_ID==filter) %>%
+     ggplot(aes(x=as.factor(cytokine_conc), y=Cell_W3 , color = drug_ID)) +
+          geom_boxplot() +
+     facet_grid(Cell_Line ~ Time_days) +
+     labs(title = paste("Antibody:", filter) ,
+     caption = paste("Experiment ID:", Exp_ID))
+     }             
+
+ab <- unique(data$antibody_ID)
+lapply(ab, antibody_plot, data)
+
+
+```
+
+```{r 20201203_BG_INFg_lapply readouts, eval=FALSE, include=FALSE}
+
+#// analysis developed for 20201203_BG_INFg treatments
+
+
+#// This lapply replaces the individual calls across all readouts for a single antibody
+ 
+readout_plot <- function(readout, data) {  #// print(paste("Readout:", readout, " and Antibody:", antibody)) }
+ 
+     data %>%
+     filter(antibody_ID=="MAR") %>%
+     ggplot(aes_string(x="as.factor(cytokine_conc)", y=readout , color ="drug_ID")) +
+     geom_boxplot() +
+     facet_grid(Cell_Line ~ Time_days) +
+     labs(title = paste("Readout:", readout, "\n Antibody: MAR"),
+          caption = caption) +
+     }
+
+readouts <- c("Cell_W2", "Cell_W3", "Nuc_W2", "Nuc_W3", "Cyto_W2", "Cyto_W3", "Fraction_W2", "Fraction_W3", "Cell_No" )
+myplots <- lapply(readouts, readout_plot, data)
+
+
+
+
+```
+
+```{r 20201203_BG_INFg_PDF of patch plot, eval=FALSE, fig.height=12, fig.width=16, include=FALSE}
+
+#// analysis developed for 20201203_BG_INFg treatments
+
+#// fig.width=16, fig.height=12 in Mardown code stipulates the size of the images printed
+#// now combine the two approaches above and iterate through antibodies and readouts programmatically
+#// use mapply to cycle through two vectors
+
+
+#// function for two factor plot
+two_factor_plot <- function(readout, antibody, data) {  #// print(paste("Readout:", readout, " and Antibody:", antibody)) }
+ 
+     data %>%
+     filter(antibody_ID==antibody) %>%
+     ggplot(aes_string(x="as.factor(cytokine_conc)", y=readout , color ="drug_ID")) +
+     geom_boxplot() +
+     facet_grid(Cell_Line ~ Time_days) +
+     labs(title = paste("Readout:", readout, "\nAntibody:", antibody) ,
+          caption = caption) +
+     }
+
+
+#// generate pairwise combination of readouts and antibodies
+readouts <- c("Cell_W2", "Cell_W3", "Nuc_W2", "Nuc_W3", "Cyto_W2", "Cyto_W3", "Fraction_W2", "Fraction_W3", "Cell_No" )
+antibodies <- unique(data$antibody_ID)
+combo <- expand.grid(readouts=readouts, antibodies=antibodies)
+
+#// call mapply with the combination
+
+myplots <- mapply(two_factor_plot, as.character(combo[[1]]), as.character(combo[[2]]), MoreArgs = list(data), SIMPLIFY = FALSE)  
+
+
+
+#// using patchwork for layout
+
+#// single page with six plots
+#// arrange these functions based on the number and grouping per plot
+#// can arrange order here or with the 'combo' vector used to call the plotting function
+six_patch_plot <- function(i, plots) {
+         (plots[[i]] + plots[[i + 2]] + plots[[i + 4]] ) / (plots[[i + 1]] + plots[[i + 3]]  + plots[[i + 5]] ) + plot_layout(guides = 'collect') }
+
+three_patch_plot <- function(i, plots) {
+         (plots[[i + 6]] + plots[[i + 8]] + plot_spacer() ) / ( plots[[i + 7]] + plot_spacer() + plot_spacer() ) + plot_layout(guides = 'collect') }
+
+#// plotting the groups of of 6 and 3 onto individual patchwork plots
+composite1 <- lapply(c(1,10,19,28), six_patch_plot, myplots)
+composite2 <- lapply(c(1,10,19,28), three_patch_plot, myplots)
+
+
+#// Stitching together the pdf file
+#// width and height needs match 'fig.width=16, fig.height=12' in Markdown code 
+
+pdf(file = paste0(out_dir, out_file, ".pdf"),   #// The directory you want to save the file in
+    width = 16, #// The width of the plot in inches
+    height = 12) #// The height of the plot in inches
+
+for (i in 1:4) {
+     print(composite1[[i]])
+     print(composite2[[i]])
+}
+dev.off()
+invisible(NULL)
+
+```
+
+# -----------------------------------------------
+
+# /// To Do ///
+
+1) Include summary about assembly into Markdown file for analysis
+	- include QC DT for exp-, plate-, well- level variable
+	- include QC plots
+
+# -----------------------------------------------
+
+# /// VERSION HISTORY ///
+
+## version 0.4
+
+-   incorporate data assembly into data analysis via function call
+-   use source for standard analysis functions
+-   employ directory structure ("./\_info", "./analysis", "./data", "./scripts")
+
+## version 0.3
+
+### extended for 20201218_JM
+
+-   functionalized custom box plots and pdf creation
+-   functionalized propagation of positive and negative controls
+-   purrr solution for easy grouped plots (use 20201005_KK as template)
+-   implemented purrr solution for generating smoothened timecourse and slope for IncuCyte
+-   wrote PRISM export chunk
+-   organized code
+
+## version 0.2
+
+### made for 20201130_A
+
+-   timeseries analysis from IncuCyte with multiple plates, drugs, cell lines, DOX treatments
+-   implemented proper plotting of controls in facet plot with control over layout and legends
+-   implemented purrr solution to propagate controls from plate level to measurement level by group

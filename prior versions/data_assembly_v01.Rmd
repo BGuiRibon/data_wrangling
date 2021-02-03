@@ -1,0 +1,668 @@
+---
+title: "Data_Merge"
+author: "Mario Niepel"
+date: "December 2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+toc: yes
+---
+
+# To Do
+
+- generate code outline with chunk names and hash tags for indentations
+- table summary of experiment_level, plate_level annotation, and well_level annotation
+- function to plot 96/384 well plate based on well_level_ids
+     - lapply to run through list of well_level_IDs
+     - start by building a list of plate outputs dependent on a known ID/attribute combo
+     - if unknown print generic combo of _ID + _attribute 
+     - need to decide if a well_level_ID is a single value per plate --> add to table, do not include in visual plate output
+     - print 1 graphical outline per 'is_unique' on a per-plate basis
+- pdf output for summary
+- add filler into empty cell in 1/1
+
+
+# for summary
+
+- deconstruct table from left to right
+- list of factors that are identical across all plates
+- table of plate specific factors (plate_IDs == rows, columns = col_names, cells = col-value by plate)
+- plate graphic for everything else
+
+```{r loading libraries, include=FALSE}
+
+library(tidyverse)
+library(DT)
+library(patchwork)
+library(huxtable)
+
+
+```
+
+
+
+
+
+# Summary and requirements:
+
+
+This script takes a CSV file from Excel or another similar program containing metadata of experiments and converts it semi-automatically to a long dataframe suitable to receive output from virtually any other instrument that puts the data on a per-plate basis either into a single table or a row/column format. This script only deals with the metadata. 'raw_data_input' deals with the experimental results. A third script 'meta_raw_merge' combines the two and performs some basic QC. The thought is that the output from that script is ready for deeper analysis, plotting of results, extracting data for other experiments, ...
+
+## MetaData requirements:
+
+The file contains two parts: Plate-level data first and Well-level data second. For now only 384 well plates are supported, but the script should be easily adjustable for 96 well plates or any other plate-based format. Spaces in any headers will be replaced with underscores
+
+## Plate-level data:
+
+- A table with columns for variables/attributes with one row for each physical plate used in the experiment.
+- **One column needs to be labeled 'Experiment_ID' and must contain an identical ID in each row.** Best practices take the date of 'day0' of the experiment and append your initials. For an experiment I started on April 16th 2019 the ID would be "20190416_MN"
+- **One column needs to be labeled 'Plate_ID' and must contain a unique ID in each row that should not overlap with any other experiments** in case results will letter be merged. Best practices are to simply take the experiment ID and append _01, _02, ...This way there will be no overlap. Each entry has to be a complete column and contain a header and one entry for each plate. Missing values will create ambiguities when addressing the data later and can not be tolerated
+
+
+## Well-level data:
+
+- each well-level treatment needs a complete 'block' of information made of two parts. Variable information for the type of treatment and qualitative or quantitative information about the treatment for each well
+- the type of treatment has to be a block of four entries:
+
+variable   | type
+-----------+------------    
+descriptor | attribute
+
+"variable" needs to be entered for the script to recognize a new column
+type needs to be entered as "numeric" or "factor" to designate if there is a continuous variable or not
+descriptor denotes a treatment class that makes sense (e.g. drug, cytokine, media, gRNA, cell_no, ...)
+if a given descriptor has multiple attributes they are combined with the descriptors. For all descriptors the most basic attribute should be ID. Additional ones for a drug could be: concentration, the vehicle, and treatment time. This would give drug_ID, drug_conc, drug_vehicle, and drug_treattime. And each one of these variables would get their own block of row/column entries.
+
+- the qualitative/quantitative block for each variable needs to be regular and complete (no empty cells in 16 rows x 24 columns). Empty cells can be filled either with NA, NULL, NaN, or whatever other label makes sense to you. The dataframe will contain these entries as it is being assembled, but they can easily be filtered out later. 
+
+```{r designation of files and directory}
+
+# Import of meta data and organization of folders and files
+
+# user input of which meta file to load
+# format has to be according to specifications laid out
+meta_in_file <- "Bin_metadata"
+
+# user input of which raw data files to load
+raw_in_files <- c("CRI128-pSTAT1-tSTAT1.txt", "CRI128-MAR-PARP14.txt")
+
+# name of assembled complete data file
+out_data <- paste0(meta_in_file, "_complete")
+out_qc <- paste0(meta_in_file, "_QC")
+
+# input and output directories 
+in_dir <- "./data/"
+out_dir_data <- "./data/"
+out_dir_plots <- "./data/"
+
+# check if out_dirs exists; if not make it
+if (!dir.exists(out_dir_data)) {dir.create(out_dir)}
+if (!dir.exists(out_dir_plots)) {dir.create(out_dir_plots)}
+
+```
+
+
+
+```{r data import}
+
+#read input_file
+suppressMessages(meta <- read_csv(paste0(in_dir, meta_in_file, ".csv"), col_names = FALSE))
+```
+
+
+
+
+```{r input file QC}
+# clean up input file and run some sanity checks
+
+# remove all NA rows and columns
+meta <- meta[rowSums(is.na(meta)) != ncol(meta),]
+meta <- meta[,colSums(is.na(meta)) != nrow(meta)]
+
+# add filler into empty cell in 1/1 if empty
+
+# Validate the presence of Experiment_ID and Plate_ID
+if (length(which(meta=="Experiment_ID")) == 0) {
+     stop("Experiment_ID not found. Please fix input.")
+}
+
+if (length(which(meta=="Experiment_ID")) > 2) {
+     stop("Experiment_ID definition is not unique. Please fix input.")
+}
+
+if (length(which(meta=="Plate_ID")) == 0) {
+     stop("Plate_ID not found. Please fix input.")
+}
+
+
+```
+
+
+
+
+```{r split plates/wells}
+# separate meta into meta data for plates and wells
+
+# identify entry with 'Experiment_ID'
+row <- which(meta=="Experiment_ID", arr.ind = T)[1]
+col <- which(meta=="Experiment_ID", arr.ind = T)[2]
+
+# set name of Experiment_ID
+Experiment_ID <- toString(meta[row+1,col])
+
+# subset all rows of meta that contain "experiment ID" 
+# %in% checks the resulting evaluation of "(meta[,col] == "Experiment_ID" | meta[,col] == Experiment_ID)" and tests if it is TRUE
+plates <- meta[(meta[,col] == "Experiment_ID" | meta[,col] == Experiment_ID) %in% TRUE, ]
+
+# subset all rows of meta with the logical inverse of plates
+wells <- meta[!((meta[,col] == "Experiment_ID" | meta[,col] == Experiment_ID) %in% TRUE),]
+
+
+```
+
+
+```{r clean up and QC}
+# clean up and sanity check for plates 
+
+# remove NA columns as above
+plates <- plates[,colSums(is.na(plates)) != nrow(plates)]
+
+# check for presence of any NA in rows
+# rowSums(is.na(plates)) counts NAs per row and puts out a vector
+# sum(rowSums) takes the sum of that
+# if this is not zero there has to be an NA somewhere
+if (sum(rowSums(is.na(plates))) > 0) {
+     stop("Plate annotation is incomplete. Missing values can't be interpreted.")
+}
+
+# convert first row into names and remove that row
+colnames(plates) <- as.character(unlist(plates[1,]))
+sapply
+
+plates <- plates[-1,]
+
+# Set up Experiment_ID level and Plate_ID
+
+# check that there is only one entry in Experiment_ID
+if (n_distinct(plates$Experiment_ID)!=1) {
+     stop("Experiment_ID is not identical across all plates.")
+}
+
+# set up experiment_level dataframe and remove from plates
+exp_level <- data.frame(Experiment_ID=plates$Experiment_ID)
+plates <- plates[ , !(names(plates)=="Experiment_ID")]
+
+
+# check that there are nrow entries in Experiment_ID
+if (n_distinct(plates$Plate_ID)!=nrow(plates)) {
+     stop("Plate_ID is not unique across all plates.")
+}
+
+# set up plate_level dataframe and remove from plates
+plate_level <- data.frame(Plate_ID=plates$Plate_ID) 
+plates <- plates[ , !(names(plates)=="Plate_ID")]
+
+
+```
+
+
+```{r parse plate section}
+# parse the plates section
+
+# number of unique vals per column
+# must use sapply/lapply to call a function across columns
+# succinct way to replace a for-loop over each item of a list consecutively to function(x)
+# a dataframe is just a special list of vectors
+unique_vals <- unname( sapply(plates, function(x) length(unique(x))) )  
+
+# append all unique columns to exp_level
+exp_level <- cbind(exp_level, plates[ ,unique_vals==1])
+
+# append the opposite selection to plate_level
+plate_level <- cbind(plate_level, plates[ ,unique_vals!=1])
+
+# create and insert Plate_No column
+plate_level$Plate_No <- as.integer(1:nrow(plates)) 
+plate_level <- plate_level[ , c(1, ncol(plate_level), 2:(ncol(plate_level)-1))]
+
+
+
+```
+
+
+```{r manual col assignments}
+
+# Don't execute this for now
+if (T==F) {
+
+
+# --- custom functions ---------------------------------------
+
+ColQuery <- function(prompt) {     
+     x = ncol(plates)+1
+     while (cols_assigned[x]==TRUE | x > ncol(plates)) {
+          x <- as.integer(readline(prompt))
+          if(is.na(x)) x=match(FALSE, cols_assigned) # NA means first free column is selected
+          if(x < 1) x=ncol(plates)+1
+     }
+     return(x)
+}
+
+# --- custom functions ---------------------------------------
+
+
+
+
+# define logical vector to keep track of which column is assigned by what 
+cols_assigned <- as.logical(c(rep(FALSE, ncol(plates)), TRUE))
+
+# display plates to see columns
+View(plates)
+View(plate_level)
+view(exp_level)
+
+
+# input number of experiment-level variables
+q <- -1
+while (q < 0 | q > length(cols_assigned[cols_assigned==FALSE])) {
+     q <- as.integer(readline("Number of experiment-level variables: "))
+     if(is.na(q)) (q=0)
+}
+n <- q
+
+# loop to assign variable name to column with values
+q <- ncol(plates)+1
+while (n != 0) {
+     while (n !=0 & cols_assigned[q]==TRUE) {
+          q <- ColQuery(paste("Column with experiment-level variable (", n, "): "))                 # q holds the col number to be assigned
+          name <- as.character(readline("Name: "))                                                  # vector of exp_level being filled with new name
+          if (name == "") { name <- colnames(plates)[q] }                                           # is new name is empty, replace with col name
+          exp_level <- cbind(exp_level, plates[ ,q])
+          colnames(exp_level)[ncol(exp_level)] <- name
+          colnames(plates)[q] <- paste0("EXP_LEVEL_", name)                                         # paste EXP_LEVEL to colnames
+          cols_assigned[q] <- TRUE                                                                  # assign q value TRUE to mark it assigned
+          q <- ncol(plates)+1                                                                       # q to be set onto FALSE as default
+          n <- n-1                                                                                  # count n down by 1
+     }
+}
+
+
+
+# ------------------------------------------------------------------------------------
+
+# input number of plate-level variables
+q <- -1
+while (q < 0 | q > length(cols_assigned[cols_assigned==FALSE])) {
+     q <- as.integer(readline("Number of plate-level variables: "))
+     if (is.na(q)) (q=0)
+}
+n <- q
+
+# loop to assign variable name to column with values
+q <- ncol(plates)+1
+while (n != 0) {
+     while (n != 0 & cols_assigned[q] == TRUE) {
+          q <- ColQuery(paste("Column with plate-level variable (", n, "): "))                      # q holds the col number to be assigned
+          name <- as.character(readline("Name: "))                                                  # vector of exp_level being filled with new name
+          if (name == "") { name <- colnames(plates)[q] }                                           # is new name is empty, replace with col name
+          plate_level <- cbind(plate_level, plates[ ,q])
+          colnames(plate_level)[ncol(plate_level)] <- name
+          colnames(plates)[q] <- paste0("PLATE_LEVEL_", name)                                       # paste EXP_LEVEL to colnames
+          cols_assigned[q] <- TRUE                                                                  # assign q value TRUE to mark it assigned
+          q <- ncol(plates) + 1                                                                       # q to be set onto FALSE as default
+          n <- n - 1                                                                                  # count n down by 1
+     }
+}
+
+
+
+}
+```
+
+
+```{r generate dataframe with plate/well specs}
+
+# Generate Plate_Row, _Col, Well_No
+well_level <- data.frame(Plate_Row = (rep(LETTERS[seq(1:16)],24)),
+                         Plate_Col = as.integer(trunc((seq(1:384)+15)/16)),
+                         Well_No = seq(1:384))
+
+# add column for Well_name (A01-P24)
+# Well_Name is concatenation of Plate_Row and Plate_Col
+# str_pad adds a leading character ("0") to width (2)
+well_level <- well_level %>% 
+     mutate(Well_Name = paste0(Plate_Row, as.factor(str_pad(Plate_Col, 2, pad = "0")))) %>%
+
+# sort by well number
+     arrange(Well_No)
+
+```
+
+
+```{r extract well level annotation}
+
+######################################################################
+### could write this as sapply as well
+### variables is a data frame
+### turn into a list that contains x/y pairs
+### pass on this list to sapply to slice out and replace
+######################################################################
+
+# identify positions of "variable"
+variables <- data.frame(which(wells=="variable", arr.ind=TRUE))       # identify x/y of 'variables' 
+variables <- variables[order(variables$row),]                         # sort variables table by row
+
+# join 384 row well_level info with readouts
+end_row <- 0
+for (i in 1:nrow(variables)) {                                   
+
+# empty out dataframe
+     slice <- data.frame()
+          
+# put row/col value of current plate map in row and col
+     row <- variables[i,"row"]
+     col <- variables[i,"col"]
+
+# identify variable type, names, and attribute
+     type <- wells[row, col+1]
+     name <- wells[row+1, col]
+     attribute <- wells[row+1, col+1]
+
+# slice out plate based on location of 'variables'
+     if  ( i==nrow(variables) ) ( end_row <- nrow(wells) ) else ( end_row <- variables[i+1,"row"]-1 )
+     slice <- wells %>% slice((row+2):end_row)
+
+# remove NA rows and NA columns
+     slice <- slice[rowSums(is.na(slice)) != ncol(slice),] # remove cols of all NA
+     slice <- slice[,colSums(is.na(slice)) != nrow(slice)] # remove rows of all NA     
+
+     values <- unlist(slice, use.names = F)
+ #    length(values)
+
+# append column to well_level dataframe
+     if (type=="numeric") { 
+               well_level <- cbind(well_level, as.numeric(values))
+          } else {
+               well_level <- cbind(well_level, values)
+     }
+# add proper metadata heading to new df column 'Name_Attribute' e.g drug_id
+     names(well_level)[ncol(well_level)] <- paste0(name,"_",attribute)
+}
+
+# extract level variables
+well_level_names <- c(colnames(well_level[5:ncol(well_level)]))
+plate_level_names <- c(colnames(plate_level[]))
+exp_level_names <- c(colnames(exp_level[])) 
+
+```
+
+
+
+```{r assemble plate and well data}
+
+# assemble the full data frame from plate and well info
+
+# join experiment and plate-level metadata
+# Duplicate each row in plates 384x
+# lastly reorder the file by plate No 
+exp_plate_level <- cbind(exp_level, plate_level) %>% slice(rep(row_number(), 384)) %>% arrange(Plate_No)
+
+
+# combine wells_long and plates_long
+meta_processed <- cbind(exp_plate_level, well_level)
+
+# sort by plate and well number
+# give proper row names to complete file
+
+meta_processed <- arrange(meta_processed, Plate_No, Plate_Col)
+
+rownames(meta_processed) <- c(seq(1:nrow(meta_processed)))
+
+
+# rearrange columns by using relocate
+# go via creation of 'new order' vector in case exp_level or plate_level is empty
+# this causes dplyr to throw an error
+new_order <- c("Experiment_ID", "Plate_ID", "Plate_No", "Plate_Row", "Plate_Col", "Well_Name", "Well_No", exp_level_names, plate_level_names) 
+
+meta_processed <- meta_processed %>% relocate (new_order[]) 
+
+# remove spaces in column names
+
+gsub(" ", "_", colnames(meta_processed))
+
+
+
+
+
+```
+
+
+```{r data summary}
+# data summary
+# When you have the time, redo with cat() and writeLines()
+# nest summary properly for displaying unique variables by attribute when calling out the attribute
+
+
+
+print("--- EXPERIMENT LEVEL SUMMARY -----------------------------------------------------------------------")
+if (length(exp_level)==0) {
+     (paste0("No experiment-level variables."))
+     } else {
+     print(paste0("Experiment-level variables (", length(exp_level_names), "): ", paste(exp_level_names, collapse=", "))) 
+     print("Unique variable at experiment-level: ")
+     print(meta_processed %>% select(all_of(exp_level_names)) %>% lapply(unique) )
+}
+     
+print("--- PLATE LEVEL SUMMARY -----------------------------------------------------------------------------")
+print(paste0("Number of plates: ", length(unique(meta_processed$Plate_ID))))
+if (length(plate_level)==0) {
+     (paste0("No plate-level variables."))
+     } else {
+     print(paste0("Plate-level variables (", length(plate_level_names), "): ", paste(plate_level_names, collapse=", ")))
+     print("Unique variable at plate-level:")
+     print(meta_processed %>% select(all_of(plate_level_names)) %>% lapply(unique) )
+     }
+
+
+print("--- WELL LEVEL SUMMARY ------------------------------------------------------------------------------")
+# Searches for any list entry that contains the string "_ID" in the list of "well_level"
+# grepl("_ID", well_level)
+# print(paste("Well-level variables (", length(well_level), "):", paste(well_level[grepl("_ID", well_level)], collapse=", ")))
+
+# same as above, but now cutting of the last three characters "_ID" through substring(x, 1, nchar(x)-3)
+# determine well_level_ids first
+# then print the summary
+well_level_ids <- substr(well_level_names[grepl("_ID", well_level_names)], 1, nchar(well_level_names[grepl("_ID", well_level_names)])-3)
+print(paste0("Well-level variables (", length(well_level_ids), "): ", paste0(well_level_ids, collapse=", "))) 
+
+# show the attributes for each ID
+for (i in 1:length(well_level_ids)) {
+     print(paste0("Attributes of ", well_level_ids[i], " (", length(well_level_names[grepl(well_level_ids[i], well_level_names)]), "): ", paste0(well_level_names[grepl(well_level_ids[i], well_level_names)], collapse=", "))) 
+}
+
+# show factor levels for individual variables
+# print(meta_processed %>% summarize_each(funs(distinct))) # efficient counting of all unique per column
+# print(meta_processed %>% select(well_level) %>% group_by_at(well_level[1]) %>% summarize()) # this works on a per-column level but not when multiple are selected
+
+# lapply(meta_processed, unique)               # lapply using base R works
+
+# integrating lapply into dplyr
+print("Unique variable values at well-level:")
+print(meta_processed %>% select(all_of(well_level_names)) %>% lapply(unique) )
+
+
+
+
+
+# table representation of plate level annotation
+# select only columns with names in 'plate_level_names'
+# select the Plate_IDs into groups
+# display 'distinct' rows of the selected columns by group
+plate_level_table <- meta_processed %>% select(all_of(plate_level_names)) %>% group_by(Plate_ID) %>% distinct()
+
+hux(plate_level_table)
+
+
+```
+
+
+Build Visual Summary of treatments
+One plate per Well-level variables
+
+
+```{r visual data summary}
+
+data <- meta_processed #[meta_processed$Plate_ID == "Plate1", ]
+#colnames(meta_processed)
+
+
+
+data %>% filter(Plate_ID == "Plate1") %>%
+     
+     ggplot(aes(x = Plate_Col, y = Plate_Row)) + 
+     coord_fixed() +
+     scale_x_discrete(limits=c(as.character(seq(1, 24)))) +
+     
+     theme(legend.position="bottom", legend.box = "horizontal") +
+     
+     geom_tile(aes(fill = cytokine_conc), color = "black", size = 0.5) +
+     geom_text(aes(label = cytokine_ID)) + 
+     scale_fill_brewer(palette = "Blues", na.value = "gray")
+    
+
+data %>% filter(Plate_ID == "Plate1") %>%
+     
+     ggplot(aes(x = Plate_Col, y = Plate_Row)) + 
+     coord_fixed() +
+     scale_x_discrete(limits=c(as.character(seq(1, 24)))) +
+     
+     theme(legend.position="bottom", legend.box = "horizontal") +
+     
+     geom_tile(aes(fill = drug_ID), color = "black", size = 0.5) +
+     geom_text(aes(label = drug_ID)) + 
+     scale_fill_brewer(palette = "Blues", na.value = "gray")
+     
+data %>% filter(Plate_ID == "Plate1") %>%
+     
+     ggplot(aes(x = Plate_Col, y = Plate_Row)) + 
+     coord_fixed() +
+     scale_x_discrete(limits=c(as.character(seq(1, 24)))) +
+     
+     theme(legend.position="bottom", legend.box = "horizontal") +
+     
+     geom_tile(aes(fill = antibody_ID), color = "black", size = 0.5) +
+     geom_text(aes(label = antibody_ID)) + 
+     scale_fill_brewer(palette = "Blues", na.value = "gray")      
+
+
+# coord_fixed() + coord_equal()
+# scale_fill_gradient(na.value = "gray") +
+
+
+#scale_fill_continuous(guide = guide_legend(title = "this is waaaaaaay too long"))
+# theme(legend.position="bottom", legend.box = "horizontal")
+
+
+
+```
+
+
+
+
+```{r save data}
+
+
+as_tibble(meta_processed)
+head(meta_processed)
+write.csv(meta_processed,paste0(out_dir_data, meta_in_file, "_formatted.csv"))
+
+
+
+```
+
+
+
+```{r raw data import and merge}
+
+# grab meta from meta_processed
+meta <- meta_processed
+
+# read all data files into a list using sapply
+data <- lapply(paste0(in_dir, raw_in_files), function(x) read_tsv(x, col_names = TRUE))
+
+# Plates in both files are the upper and lower half of the plate
+# since they are independent scan they have different scan IDs
+# they map to identical plate numbers
+# harmonize Plate/Scan ID numbers for pSTAT1/tSTAT1
+# data[[1]] gets the 1st element out of the list (instead of the packed list item)
+# element gets written back after every row element in the first column gets eight added to match Plate ID in next file
+data[[1]][,1] <- data[[1]][,1]+8
+
+# reduce left iterates through a list with many items and consecutively applies the function to pairs in the list
+# that's how reduce works to cycle through columns when checking for NA, but not through rows.
+data <- data %>% reduce(full_join)
+
+####################################################################################################
+##### check here if there are multiple entries for the same well
+##### use summary data function in dplyr to merge here? 
+##### probably fine to use take 'sum or mean'
+##### sum doesn't make sense if there is a 'fractional value'
+##### mean doesn't make sense for a count
+##### sum is probably the better way to go since it is easier to just recalculate fractional values
+####################################################################################################
+
+```
+
+
+```{r clean up raw data}
+
+# Clean up data to be merged
+
+# Clean up column names
+colnames(data)[which(colnames(data)=="% Positive W2 (MultiWaveScoring)")] <- "Fraction_W2"
+colnames(data)[which(colnames(data)=="Cell: W2 Nucleus Average Intensity (MultiWaveScoring)")] <- "Nuc_W2"
+colnames(data)[which(colnames(data)=="Cell: W2 Cytoplasm Average Intensity (MultiWaveScoring)")] <- "Cyto_W2"
+colnames(data)[which(colnames(data)=="Cell: W2 Cell Average Intensity (MultiWaveScoring)")] <- "Cell_W2"
+colnames(data)[which(colnames(data)=="% Positive W3 (MultiWaveScoring)")] <- "Fraction_W3"
+colnames(data)[which(colnames(data)=="Cell: W3 Nucleus Average Intensity (MultiWaveScoring)")] <- "Nuc_W3"
+colnames(data)[which(colnames(data)=="Cell: W3 Cytoplasm Average Intensity (MultiWaveScoring)")] <- "Cyto_W3"
+colnames(data)[which(colnames(data)=="Cell: W3 Cell Average Intensity (MultiWaveScoring)")] <- "Cell_W3"
+colnames(data)[which(colnames(data)=="Total Cells (MultiWaveScoring)")] <- "Cell_No"
+colnames(data) <- gsub(" ", "_", colnames(data))
+
+# colnames(data)[1:12] <- unlist(lapply(colnames(data)[1:12], function(x) paste0(x, "_A")), use.names = F)
+# colnames(data)[13:26] <- unlist(lapply(colnames(data)[13:26], function(x) paste0(x, "_B")), use.names = F)
+
+# remove all rows where Plate_ID is NA
+data <- data[ !is.na(data$Plate_ID)  , ]
+
+# turn Plate_ID into chr
+data$Plate_ID <- as.character(data$Plate_ID, stringsAsFactors = F)
+
+# # set column to be used for merging raw data     
+# data_key <- as.character(unique(data$Plate_ID))
+# 
+# # generate unique 'Join' column in data set from plate ID 
+# data <- cbind.data.frame(join_Plate_ID=as.character(data$Plate_ID), data[-1], stringsAsFactors = F)
+
+# # generate unique 'Join' column in data set from plate ID 
+# meta <- cbind.data.frame(join_Plate_ID=as.character(meta$Plate_ID), meta, stringsAsFactors = F)
+# 
+# # set column to be used for merging in meta_data
+# meta_key <- as.character(unique(meta$Plate_ID))
+
+# replace entries in data$Plate_ID to match meta$Plate_ID
+# uses meta_merge and data_merge as keys
+# can do this loop as sapply as well
+# merge the list to include the key pairs that will be matched up to be passed on the replacement function
+# 
+# for (i in 1:length(meta_key)) { data$join_Plate_ID[data$join_Plate_ID==data_key[i]] <- meta_key[i] }
+
+# join by Plate_ID column and Well_Name
+complete <- full_join(meta, data, by = c("Scan_ID" = "Plate_ID", "Well_Name" = "Well_Name"))
+
+write.csv(complete, paste0(out_dir_data, out_data, ".csv"))
+
+
+```

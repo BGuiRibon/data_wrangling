@@ -1,0 +1,164 @@
+---
+title: "Generic converter of plate- to column-data"
+subtitle: "Use with discretion and QC the results!"
+author: "Mario Niepel"
+date: "December 2020"
+version: "0.1"
+output:
+     html_document:
+          toc: true
+          toc_depth: 2
+          theme: united
+version: 0.1 
+---
+
+THIS SCRIPT IS OBSOLETE
+
+```{r include=FALSE}
+
+require("tidyverse")
+
+```
+
+
+Summary and requirements:
+
+- script takes raw data in plate format coming off readers (such as HTM, CTG plate reader, maybe IncuCyte) in plate-based formats and converts it to column-based format ready to merge with meta-data
+- raw data blocks have to be annotated in the same manner as meta-data plate-based blocks
+- raw data blocks have to be complete and need to be fully numerical to allow downstream computation
+- annotation has to contain a Plate_ID somewhere
+- all blocks read in by this script have to be identical readouts so they can be appended
+
+
+
+
+```{r designation of files and directory}
+
+# Import of meta data and organization of folders and files
+
+# user input of which meta file to load
+# format has to be according to specifications laid out above
+in_file <- c("20201215_JM_raw_data_1.csv", "20201215_JM_raw_data_1.csv")
+
+# prefix for name of assembled complete file
+out_file <- "20201215_JM_raw_data_assembled"
+
+# input and output directories 
+in_dir <- "./data/"
+out_dir <- "./work/"
+
+```
+
+
+
+```{r read data and creat output dir}
+
+# check if out_dirs exists; if not make it
+if (!dir.exists(out_dir)) {dir.create(out_dir)}
+
+
+#// script can currently only deal with one plate at a time
+#// v02 properly automated to take multi-file input
+wells <- read_csv("./data/20201215_JM_raw_data_1.csv", col_names = FALSE)
+Plate_ID <- "20201215_JM_01"
+
+ 
+wells <- read_csv("./data/20201215_JM_raw_data_2.csv", col_names = FALSE)
+Plate_ID <- "20201215_JM_02"
+ 
+
+
+
+
+
+```
+
+
+```{r clean up to dataframe}
+
+# clean up the raw data and convert into a dataframe
+
+# identify positions of "variable"
+variables <- data.frame(which(wells=="variable", arr.ind=TRUE))       # identify x/y of 'variables' 
+variables <- variables[order(variables$row),]                         # sort variables table by row
+
+well_level <- data.frame(Plate_ID = (rep(as.character(Plate_ID), 384)),
+                         Plate_Row = (rep(LETTERS[seq(1:16)],24)),
+                         Plate_Col = as.integer(trunc((seq(1:384)+15)/16)),
+                         Well_No = seq(1:384))
+
+# add column for Well_name (A01-P24)
+# Well_Name is concatenation of Plate_Row and Plate_Col
+# str_pad adds a leading character ("0") to width (2)
+
+well_level <- well_level %>% 
+     mutate(Well_Name = paste0(Plate_Row, as.factor(str_pad(Plate_Col, 2, pad = "0")))) %>%
+
+# sort by well number
+     arrange(Well_No)
+
+```
+
+
+```{r}
+
+######################################################################
+### could write this as sapply as well
+### variables is a data frame
+### turn into a list that contains x/y pairs
+### pass on this list to sapply to slice out and replace
+######################################################################
+
+
+# join 384 row well_level info with readouts
+
+end_row <- 0
+for (i in 1:nrow(variables)) {                                   
+
+# empty out dataframe
+     slice <- data.frame()
+          
+# put row/col value of current plate map in row and col
+     row <- variables[i,"row"]
+     col <- variables[i,"col"]
+  
+     
+# identify variable type, names, and attribute
+     type <- wells[row, col+1]
+     name <- wells[row+1, col]
+     attribute <- wells[row+1, col+1]
+
+# slice out plate based on location of 'variables'
+     if  ( i==nrow(variables) ) ( end_row <- nrow(wells) ) else ( end_row <- variables[i+1,"row"]-1 )
+     slice <- wells %>% slice((row+2):end_row)
+
+# remove NA rows and NA columns
+     slice <- slice[rowSums(is.na(slice)) != ncol(slice),] # remove cols of all NA
+     slice <- slice[,colSums(is.na(slice)) != nrow(slice)] # remove rows of all NA     
+
+     values <- unlist(slice, use.names = F)
+ #    length(values)
+
+# append column to well_level dataframe
+     if (type=="numeric") { 
+               well_level <- cbind(well_level, as.numeric(values))
+          } else {
+               well_level <- cbind(well_level, values)
+     }
+# add proper metadata heading to new df column 'Name_Attribute' e.g drug_id
+     names(well_level)[ncol(well_level)] <- name
+}
+
+# # extract level variables
+# well_level_names <- c(colnames(well_level[5:ncol(well_level)]))
+# plate_level_names <- c(colnames(plate_level[]))
+# exp_level_names <- c(colnames(exp_level[])) 
+
+```
+
+```{r}
+write_tsv(well_level, paste0(out_dir, Plate_ID, "_raw.tsv"))
+
+
+```
+

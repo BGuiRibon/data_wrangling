@@ -1,0 +1,205 @@
+,,,,Experiment_ID,,Date,,,Plate_ID,,Drug_ID,,Drug_conc,,Drug_unit,,Drug_control,,,,,,
+,,,,20201130_AL,,20201130,,,20201130_AL_01,,Drug_ID_A,,Drug_conc_A,,Drug_unit_A,,Drug_control_A,,,,,,
+,,,,20201130_AL,,20201130,,,20201130_AL_02,,Drug_ID_B,,Drug_conc_B,,Drug_unit_B,,Drug_control_B,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,variable,factor,,,,,,,,,,,,,,,,,,,,,
+,Cell_Line,ID,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh0,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2,CT26sh2
+,,,,,,,,,,,,,,,,,,,,,,,
+,variable,factor,,,,,,,,,,,,,,,,,,,,,
+,DOX,ID,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg,neg
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos,pos
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+variable,factor,,,,,,,,,,,,,,,,,,,,,,
+Drug,ID,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,Bay MPS1i
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,Barasertib
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,Curaxin
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,Camptothecin
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,DMSO,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,Camptothecin,Camptothecin,Curaxin,Curaxin,Bay MPS1i,Bay MPS1i,Barasertib,Barasertib,5-AZA,5-AZA,DMSO,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+variable,factor,,,,,,,,,,,,,,,,,,,,,,
+Drug,unit,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,uM
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,uM
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+variable,numeric,,,,,,,,,,,,,,,,,,,,,,
+Drug,conc,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,4
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8
+NULL,-1,1,1,2,2,0.5,0.5,2,2,2,2,1,1,2,2,0.5,0.5,2,2,2,2,-1,8
+NULL,-1,0.398107171,0.398107171,0.693144843,0.693144843,0.165722701,0.165722701,0.693144843,0.693144843,0.9563525,0.9563525,0.398107171,0.398107171,0.693144843,0.693144843,0.165722701,0.165722701,0.693144843,0.693144843,0.9563525,0.9563525,-1,8
+NULL,-1,0.158489319,0.158489319,0.240224887,0.240224887,0.054928027,0.054928027,0.240224887,0.240224887,0.457305052,0.457305052,0.158489319,0.158489319,0.240224887,0.240224887,0.054928027,0.054928027,0.240224887,0.240224887,0.457305052,0.457305052,-1,NULL
+NULL,-1,6.31E-02,0.063095734,0.083255321,0.083255321,0.018205642,0.018205642,0.083255321,0.083255321,0.218672415,0.218672415,0.063095734,0.063095734,0.083255321,0.083255321,0.018205642,0.018205642,0.083255321,0.083255321,0.218672415,0.218672415,-1,NULL
+NULL,-1,2.51E-02,0.025118864,0.028853998,0.028853998,0.006034176,0.006034176,0.028853998,0.028853998,0.104563955,0.104563955,0.025118864,0.025118864,0.028853998,0.028853998,0.006034176,0.006034176,0.028853998,0.028853998,0.104563955,0.104563955,-1,NULL
+NULL,-1,0.01,0.01,0.01,0.01,0.002,0.002,0.01,0.01,0.05,0.05,0.01,0.01,0.01,0.01,0.002,0.002,0.01,0.01,0.05,0.05,-1,NULL
+NULL,-1,1,1,2,2,0.5,0.5,2,2,2,2,1,1,2,2,0.5,0.5,2,2,2,2,-1,NULL
+NULL,-1,0.398107171,0.398107171,0.693144843,0.693144843,0.165722701,0.165722701,0.693144843,0.693144843,0.9563525,0.9563525,0.398107171,0.398107171,0.693144843,0.693144843,0.165722701,0.165722701,0.693144843,0.693144843,0.9563525,0.9563525,-1,NULL
+NULL,-1,0.158489319,0.158489319,0.240224887,0.240224887,0.054928027,0.054928027,0.240224887,0.240224887,0.457305052,0.457305052,0.158489319,0.158489319,0.240224887,0.240224887,0.054928027,0.054928027,0.240224887,0.240224887,0.457305052,0.457305052,-1,NULL
+NULL,-1,6.31E-02,0.063095734,0.083255321,0.083255321,0.018205642,0.018205642,0.083255321,0.083255321,0.218672415,0.218672415,0.063095734,0.063095734,0.083255321,0.083255321,0.018205642,0.018205642,0.083255321,0.083255321,0.218672415,0.218672415,-1,NULL
+NULL,-1,2.51E-02,0.025118864,0.028853998,0.028853998,0.006034176,0.006034176,0.028853998,0.028853998,0.104563955,0.104563955,0.025118864,0.025118864,0.028853998,0.028853998,0.006034176,0.006034176,0.028853998,0.028853998,0.104563955,0.104563955,-1,NULL
+NULL,-1,0.01,0.01,0.01,0.01,0.002,0.002,0.01,0.01,0.05,0.05,0.01,0.01,0.01,0.01,0.002,0.002,0.01,0.01,0.05,0.05,-1,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+,,,,,,,,,,,,,,,,,,,,,,,
+variable,factor,,,,,,,,,,,,,,,,,,,,,,
+Drug,control,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,none
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,none
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,none
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,none
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,none,neg,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+variable,factor,,,,,,,,,,,,,,,,,,,,,,
+Drug,ID,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,Ruxlotinib
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,TBk1i GSK
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,NU7441,NU7441,TBk1i GSK,TBk1i GSK,Ruxlotinib,Ruxlotinib,ATMi KU,ATMi KU,DMSO,DMSO,DMSO,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+variable,factor,,,,,,,,,,,,,,,,,,,,,,
+Drug,unit,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,uM
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,uM
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,uM,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+variable,numeric,,,,,,,,,,,,,,,,,,,,,,
+Drug,conc,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8
+NULL,-1,15,15,5,5,5,5,10,10,-1,-1,15,15,5,5,5,5,10,10,-1,-1,-1,NULL
+NULL,-1,5.506466574,5.506466574,1.990535853,1.990535853,1.990535853,1.990535853,3.465724216,3.465724216,-1,-1,5.506466574,5.506466574,1.990535853,1.990535853,1.990535853,1.990535853,3.465724216,3.465724216,-1,-1,-1,NULL
+NULL,-1,2.021411609,2.021411609,0.792446596,0.792446596,0.792446596,0.792446596,1.201124434,1.201124434,-1,-1,2.021411609,2.021411609,0.792446596,0.792446596,0.792446596,0.792446596,1.201124434,1.201124434,-1,-1,-1,NULL
+NULL,-1,0.742055697,0.742055697,0.315478672,0.315478672,0.315478672,0.315478672,0.416276604,0.416276604,-1,-1,0.742055697,0.742055697,0.315478672,0.315478672,0.315478672,0.315478672,0.416276604,0.416276604,-1,-1,-1,NULL
+NULL,-1,0.272406993,0.272406993,0.125594322,0.125594322,0.125594322,0.125594322,0.144269991,0.144269991,-1,-1,0.272406993,0.272406993,0.125594322,0.125594322,0.125594322,0.125594322,0.144269991,0.144269991,-1,-1,-1,NULL
+NULL,-1,0.1,0.1,0.05,0.05,0.05,0.05,0.05,0.05,-1,-1,0.1,0.1,0.05,0.05,0.05,0.05,0.05,0.05,-1,-1,-1,NULL
+NULL,-1,15,15,5,5,5,5,10,10,-1,-1,15,15,5,5,5,5,10,10,-1,-1,-1,NULL
+NULL,-1,5.506466574,5.506466574,1.990535853,1.990535853,1.990535853,1.990535853,3.465724216,3.465724216,-1,-1,5.506466574,5.506466574,1.990535853,1.990535853,1.990535853,1.990535853,3.465724216,3.465724216,-1,-1,-1,NULL
+NULL,-1,2.021411609,2.021411609,0.792446596,0.792446596,0.792446596,0.792446596,1.201124434,1.201124434,-1,-1,2.021411609,2.021411609,0.792446596,0.792446596,0.792446596,0.792446596,1.201124434,1.201124434,-1,-1,-1,NULL
+NULL,-1,0.742055697,0.742055697,0.315478672,0.315478672,0.315478672,0.315478672,0.416276604,0.416276604,-1,-1,0.742055697,0.742055697,0.315478672,0.315478672,0.315478672,0.315478672,0.416276604,0.416276604,-1,-1,-1,NULL
+NULL,-1,0.272406993,0.272406993,0.125594322,0.125594322,0.125594322,0.125594322,0.144269991,0.144269991,-1,-1,0.272406993,0.272406993,0.125594322,0.125594322,0.125594322,0.125594322,0.144269991,0.144269991,-1,-1,-1,NULL
+NULL,-1,0.1,0.1,0.05,0.05,0.05,0.05,0.05,0.05,-1,-1,0.1,0.1,0.05,0.05,0.05,0.05,0.05,0.05,-1,-1,-1,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,
+variable,factor,,,,,,,,,,,,,,,,,,,,,,
+Drug,control,,,,,,,,,,,,,,,,,,,,,,
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,none
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,none
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,neg,none,none,none,none,none,none,none,none,neg,neg,none,none,none,none,none,none,none,none,neg,neg,neg,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL

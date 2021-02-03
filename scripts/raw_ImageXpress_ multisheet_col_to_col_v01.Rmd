@@ -1,0 +1,121 @@
+---
+title: "Split Excel to CSV"
+subtitle: "Use with discretion and QC the results!"
+author: "Mario Niepel"
+date: "December 2020"
+version: "0.1"
+output:
+     html_document:
+          toc: true
+          toc_depth: 2
+          theme: united 
+version: 0.1
+---
+
+# To Do
+
+
+
+```{r loading libraries, include=FALSE}
+
+# common to all scripts
+library(tidyverse)
+library(DT)
+library(readxl)
+
+```
+
+
+# Summary and requirements:
+
+- Script takes a multi-sheet Excel file
+
+- output comes from high throughput microscope
+        - raw data that needs to be combined with meta data
+        - one plate per sheet
+        - data in column format
+
+- identifies complete columns identified by 'Plate_ID' 
+- only columns with header in 'Plate_ID' column will be read
+- those columns will be saved into individual CSV files that can be assembled later
+
+
+
+```{r designation of files and directory}
+
+# Import of meta data and organization of folders and files
+
+# user input of which meta file to load
+# format has to be according to specifications laid out
+in_file <- "20200908_AL_2nd_stressor_screen.xlsx"
+
+# prefix for name of assembled complete file
+out_file <- "20200908_AL_2nd_stressor_assembled"
+
+# heading that identified 'Plate_ID' for merger
+Plate_ID <- "Plate ID"
+
+# input and output directories 
+in_dir <- "./data/"
+out_dir <- "./work/"
+
+```
+
+
+
+
+```{r file input & QC, include=FALSE}
+
+# check if out_dirs exists; if not make it
+if (!dir.exists(out_dir)) {dir.create(out_dir)}
+
+# read sheet names and number of sheets
+sheet_names <- excel_sheets(paste0(in_dir, in_file))
+
+# read input_file
+all_sheets <- lapply(sheet_names, function(x) { read_excel(paste0(in_dir, in_file), x) } )
+
+# move up+down y axis and find the biggest X axis that is common to all y
+all_sheets <- lapply(all_sheets, function(x) {
+
+     # which row has headers
+     Plate_ID_loc <- which(x == Plate_ID, arr.ind = T)
+     
+     # identify NAs in header row
+     NA_cols <- which(is.na(x[Plate_ID_loc[1],]))
+     # identify first NA column smaller than Plate_ID col
+     min_col <- NA_cols[ max(which(NA_cols < Plate_ID_loc[1])) ] + 1
+     if (is.na(min_col)) min_col <- 1
+     # identify first NA column larger than Plate_ID col
+     max_col <- NA_cols[ min(which(NA_cols > Plate_ID_loc[1])) ] - 1
+     if (is.na(max_col)) max_col <- ncol(x)
+     
+     # excise cols for transfer
+     x <- x %>%
+     # remove rows preceding header
+     slice(Plate_ID_loc:nrow(x)) %>%
+     # remove all cols before and after 'Plate_ID column' with NAs
+     select(min_col:max_col) 
+     
+     # turn first row into col_names
+     colnames(x) <- x[1,]
+     
+     # remove first row
+     x <- x[-1,]
+     
+} )
+
+# assemble all individual sheets by rbind
+assembled <- reduce(all_sheets, rbind)
+
+# append Plate_ID and Well_ID columns
+assembled <- assembled %>%
+     mutate(Scan_ID = as.character(.data[[Plate_ID]])) %>%
+     # transmute(as.numeric(`Well Y`))
+     mutate(Well_ID = paste0(LETTERS[as.numeric(`Well Y`)], (str_pad(`Well X`, 2, pad = "0")) ))
+          
+# write full data as tsv
+write_tsv(assembled, paste0(out_dir, out_file, ".tsv"), col_names = T)
+
+
+```

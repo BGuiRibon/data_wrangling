@@ -1,0 +1,203 @@
+---
+title: "D300 to standard output"
+subtitle: "Use with discretion and QC the results!"
+author: "Mario Niepel"
+date: "December 2020"
+version: "0.1"
+output:
+     html_document:
+          toc: true
+          toc_depth: 2
+          theme: united
+version: 0.1 
+---
+
+
+#// Summary and requirements:
+
+- Script takes out from D300 copied and pasted into Excel sheets
+- can have multiple sheets
+- output as properly formatted CSV files ready to assemble meta data input
+
+
+#// To Do
+- figure out how to deal with plates that have multiple drug treatments in the same well
+
+
+
+```{r loading libraries, include=FALSE}
+
+library(tidyverse)
+library(DT)
+library(readxl)
+
+```
+
+
+
+
+
+```{r designation of files and directory}
+
+#// Import of meta data and organization of folders and files
+
+#// user input of which meta file to load
+#// format has to be according to specifications laid out
+in_file <- "20201130_AL_D300 treatments.xlsx"
+
+#// prefix for name of assembled complete file
+out_file <- "20201130_AL_D300_parsed.csv"
+
+#// heading that identified 'Plate_ID' for merger
+Exp_ID <- "20201130_AL"
+
+#// input and output directories 
+in_dir <- "./data/"
+out_dir <- "./work/"
+
+```
+
+
+```{r file input & QC, include=FALSE}
+#// check if out_dirs exists; if not make it
+if (!dir.exists(out_dir)) {dir.create(out_dir)}
+
+#// read sheet names and number of sheets
+sheet_names <- excel_sheets(paste0(in_dir, in_file))
+
+#// read input_file
+in_sheets <- lapply( sheet_names, function(x) { read_excel(paste0(in_dir, in_file), x, col_names = FALSE) } )
+
+```
+
+
+```{r helper functions}
+
+#// convert plate-based to col-based data
+col_extraction <- function(start, end, IDs, sheet) {
+        
+        #// cut out slice for one plate
+        slice <- sheet %>% slice(start:end) %>% select(-1)
+        #// read in data from plate       
+        values <- list(unlist(slice, use.names = F))
+        #// name values column
+        names(values) <- IDs
+        return(values)
+}
+
+#// duplicate column and fill with col name
+col_duplication <- function(col, ID) {
+       
+        #// turn passed list into a dataframe
+        col <- data.frame(col, stringsAsFactors = F)
+        #// duplicate
+        col <- cbind(col, col)
+        #// replace values with name
+        col[!is.na(col[,2]),1] <- paste0(ID, "_")
+        #// replace names
+        colnames(col) <- ID
+        return(col)
+}
+
+```
+
+
+
+```{r file input & QC, echo=FALSE}
+
+out_sheets <- lapply( in_sheets, function(sheet) { 
+
+
+#// get all col_info
+	#// pull out first col for string match
+	first_col <- unlist(sheet[,1], use.names = F)
+	#// replace all NA values
+	first_col[is.na(first_col)] <- "NA"
+	#// remove everything but the first character
+	first_col <- str_trunc(first_col, 1, side = "right", ellipsis = "")
+	#// collapse into single string containing first letter only
+	first_col <- str_c(first_col, sep = "", collapse = "")
+	#// generate matching string
+	col_info <- data.frame(str_locate_all(first_col, str_c(LETTERS[1:16], sep = "", collapse = "")))
+	rm(first_col)
+
+#// Get drug IDs
+	ID <- unlist(sheet[col_info$start-2, 1], use.names = F)
+	unit <- unlist(sheet[col_info$start-1, 1], use.names = F)
+	Drug_IDs <- paste0 (ID, "_", unit) ; rm(ID); rm(unit)
+
+#// call mapply to get back all drug treatments for this sheet
+col_data <- mapply(col_extraction, col_info$start, col_info$end, Drug_IDs, MoreArgs = list(sheet), SIMPLIFY = F)
+
+#// duplicate each column and add Drug_IDs in column before concentration
+col_data <- mapply(col_duplication, col_data, Drug_IDs, SIMPLIFY = F)
+       
+#// collapse into merged columns
+	#// turn into a dataframe
+	col_data <- data.frame(col_data, stringsAsFactors = F)  
+	#// replace NA with ""
+	col_data <- lapply(col_data, function(x) { x[is.na(x)] <- ""; return(x) } ) 
+	#// turn into a dataframe
+	col_data <- data.frame(col_data, stringsAsFactors = F) 
+	#// collapse col_data rowwise into single string
+	col_data <- apply(col_data, 1, function(x) str_c(x, sep = "", collapse = "") )
+	#// replace empty fields with NULL
+	col_data[!str_detect(col_data, "")] <- "NULL_NULL_NULL"        
+	#// split into three columns
+	col_data <- data.frame(str_split_fixed(col_data, "_", 3), stringsAsFactors = F)
+	colnames(col_data) <- c("Drug_ID", "Drug_unit", "Drug_conc")
+
+#// summary table of input sheet1         
+
+	datatable(data = col_data, options = list(
+		columnDefs = list(list(className = 'dt-center', targets = 1:ncol(col_data))),
+		pageLength = 10,
+		lengthMenu = c(10, 25, 50, 100), class = "stripe hover compact",
+		style="width:100%",
+		scrollX = T)
+	) %>% print
+
+                
+#// convert back into 384 well plate format
+        #// generate output matrix
+        out_sheet <- matrix("", nrow = 54, ncol = 24)
+        #// paste in matrices for ID, unit, conc
+        out_sheet[3:18, ] <- matrix(col_data[[1]], nrow = 16, ncol = 24, byrow = F)
+        out_sheet[21:36, ] <- matrix(col_data[[2]], nrow = 16, ncol = 24, byrow = F)
+        out_sheet[39:54, ] <- matrix(col_data[[3]], nrow = 16, ncol = 24, byrow = F)
+        #// add keys
+        out_sheet[c(1,19,37),1] <- "variable"
+        out_sheet[c(1,19),2] <- "factor"; out_sheet[37,2] <- "numeric"
+        out_sheet[c(2,20,38),1] <- "Drug"
+        out_sheet[c(2,20,38),2] <- c("ID", "unit", "conc")
+
+        
+      
+        
+        
+        
+return(out_sheet)       
+
+} )
+
+
+
+        
+```
+
+
+```{r file QC and output, include=FALSE}
+
+#// clear out save file to use append
+write.table("", paste0(out_dir, out_file), row.names = FALSE, col.names = FALSE)
+
+#// save as csv files
+#// uses write.table to append list into output
+#// can only store as CSV and not as TSV
+#// maybe rewrite to store intermediate appended results and then save as TSV for consistency?
+lapply( out_sheets, function(x) {
+        save <- matrix(unlist(x), nrow = 54, ncol = 24)
+        write.table(save, paste0(out_dir, out_file), append = TRUE, row.names = FALSE, col.names = FALSE, sep = ",") } )
+
+
+```

@@ -1,0 +1,178 @@
+---
+title: "Convert IncyCyte time series to columns"
+subtitle: "Use with discretion and QC the results!"
+author: "Mario Niepel"
+date: "December 2020"
+version: "0.1"
+output:
+     html_document:
+          toc: true
+          toc_depth: 2
+          theme: united 
+version: 0.1
+---
+
+
+# Summary and requirements:
+
+- Script takes output from IncuCyte time series
+- converts it to column representation 
+- includes column for starting data and plate ID
+
+
+# To Do
+
+
+
+
+```{r loading libraries, include=FALSE}
+
+library(tidyverse)
+library(DT)
+library(readxl)
+
+```
+
+
+
+
+
+```{r designation of files and directory}
+
+# Import of meta data and organization of folders and files
+
+# user input of which meta file to load
+# format has to be according to specifications laid out
+in_file <- c("CT26shRNAvsInhibitors_plate1_Incucyte.xlsx",
+		   "CT26shRNAvsInhibitors_plate2_Incucyte.xlsx")
+
+# prefix for name of assembled complete file
+out_file <- c("20201130_AL_IncuCyte_parsed_Plate1.tsv",
+		    "20201130_AL_IncuCyte_parsed_Plate2.tsv")
+
+# heading that identified 'Plate_ID' for merger
+Plate_ID <- c("20201130_AL_01",
+		    "20201130_AL_02")
+
+# Experiment ID
+Exp_ID <- "20201130_AL"
+
+# input and output directories 
+in_dir <- "./data/"
+out_dir <- "./work/"
+
+```
+
+
+
+
+```{r helper functions}
+
+# convert plate-based to col-based data
+col_extraction <- function(start, end, IDs, sheet) {
+        
+        # cut out slice for one plate
+        slice <- sheet %>% slice(start:end) %>% select(-1)
+        # read in data from plate       
+        values <- list(unlist(slice, use.names = F))
+        # name values column
+        names(values) <- IDs
+       
+return(values)
+}
+
+```
+
+
+
+```{r parse & QC, echo=FALSE}
+
+col_parsing <- function(sheet, ID) {
+
+	print(ID)
+	print(head(sheet)) 
+	
+#sheet <- in_data[[1]]
+
+# get all col_info
+	# pull out first col for string match
+	first_col <- unlist(sheet[,1], use.names = F)
+	# replace all NA values
+	first_col[is.na(first_col)] <- "NA"
+	# remove everything but the first character
+	first_col <- str_trunc(first_col, 1, side = "right", ellipsis = "")
+	# collapse into single string containing first letter only
+	first_col <- str_c(first_col, sep = "", collapse = "")
+	# generate matching string
+	col_info <- data.frame(str_locate_all(first_col, str_c(LETTERS[1:16], sep = "", collapse = "")))
+	rm(first_col)
+
+# Get drug Time Stamp and Elapsed Time
+# note: Col_names in dataframes can not start with a number
+# keeping things
+	time_zero <- unlist(sheet[col_info$start[1]-3, 2], use.names = F)
+ 	time_zero <- as.POSIXct(as.Date("1900-01-01 00:00", tzone="UTC"))+3600*5 + 3600*24*as.numeric(time_zero)
+	time_elapsed <- unlist(sheet[col_info$start-3, 4], use.names = F)
+	time_units <- unlist(sheet[col_info$start-3, 5], use.names = F)
+	time <- paste0 (time_units, "_", time_elapsed) ; rm(time_elapsed); rm(time_units)
+
+# call mapply to get back all drug treatments for this sheet
+col_data <- mapply(col_extraction, col_info$start, col_info$end, time, MoreArgs = list(sheet), SIMPLIFY = T)
+
+# add identifier columns
+col_data <- append(list("Exp_ID"    = c(rep(   Exp_ID, 384)),
+				    "Plate_ID"  = c(rep(       ID, 384)),
+				    "Date"      = c(rep(time_zero, 384)),
+				    "Plate_Row" = c(rep(LETTERS[seq(1:16)],24)),
+                        "Plate_Col" = as.factor(trunc((seq(1:384)+15)/16)),
+                        "Well_No"   = as.factor(seq(1:384)),
+			         "Well_ID"   = as.factor(         str_c(   rep(LETTERS[seq(1:16)],24), 
+			         						         str_pad(as.factor(trunc((seq(1:384)+15)/16)), 2, pad = "0"))     )     ) ,
+				    col_data)
+
+# turn into dataframe for saving
+col_data <- data.frame(col_data, stringsAsFactors = F)
+
+# summary table of input sheet1         
+
+	datatable(data = col_data, options = list(
+		columnDefs = list(list(className = 'dt-center', targets = 1:ncol(col_data))),
+		pageLength = 10,
+		lengthMenu = c(10, 25, 50, 100), class = "stripe hover compact",
+		style="width:100%",
+		scrollX = T)
+	) %>% print
+
+return(col_data)       
+
+} 
+
+
+
+        
+```
+
+
+
+
+```{r file input, include=FALSE}
+
+# check if out_dirs exists; if not make it
+if (!dir.exists(out_dir)) {dir.create(out_dir)}
+
+# read input_files
+in_data <- lapply(in_file, function(x) { read_excel(paste0(in_dir, x), col_names = FALSE, col_types = "text" ) } )
+
+# parse data
+out_data <- mapply(col_parsing, in_data, Plate_ID, MoreArgs = NULL, SIMPLIFY = FALSE)
+
+# save as csv files
+mapply(function(x, y) { write_tsv(x, paste0(out_dir, y)) }, out_data, out_file)
+	  
+
+```
+
+
+
+
+```
