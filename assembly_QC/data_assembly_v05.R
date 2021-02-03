@@ -1,4 +1,4 @@
-## ----loading_libraries, include=FALSE----------------------------------------------------
+## ----loading_libraries, include=FALSE--------------------------------------------------------------------------------------
 
 set.seed(0815)
 
@@ -12,7 +12,7 @@ groundhog.library("readxl", groundhog_day)
 
 
 
-## ----read_meta---------------------------------------------------------------------------
+## ----read_meta-------------------------------------------------------------------------------------------------------------
 
 read_meta_data <- function(meta_in_file, in_dir) {
 
@@ -56,7 +56,7 @@ return(meta)
 
 
 
-## ----read_raw, warning=TRUE, include=FALSE-----------------------------------------------
+## ----read_raw, warning=TRUE, include=FALSE---------------------------------------------------------------------------------
 
 #// read raw data into raw_list
 read_raw_data <- function(raw_in_file, in_dir) {
@@ -106,7 +106,7 @@ read_raw_data <- function(raw_in_file, in_dir) {
 
 
 
-## ----split_plates_wells, echo=FALSE, warning=TRUE----------------------------------------
+## ----split_plates_wells, echo=FALSE, warning=TRUE--------------------------------------------------------------------------
 
 split_meta <- function(meta, Exp_ID) {
 
@@ -137,7 +137,7 @@ return(list(plates, wells))
 
 
 
-## ----clean_and_QC, echo=FALSE, warning=TRUE----------------------------------------------
+## ----clean_and_QC, echo=FALSE, warning=TRUE--------------------------------------------------------------------------------
 
 parse_plates <- function(plates) {
 	
@@ -219,7 +219,7 @@ return(list(exp_level, plate_level, well_level))
 
 
 
-## ----extract_well_annotation, echo=FALSE, warning=TRUE-----------------------------------
+## ----extract_well_annotation, echo=FALSE, warning=TRUE---------------------------------------------------------------------
 
 parse_wells <- function(wells, well_level) {
 
@@ -318,7 +318,7 @@ return(well_level)
 
 
 
-## ----assemble_plate_and_well, echo=FALSE, warning=TRUE-----------------------------------
+## ----assemble_plate_and_well, echo=FALSE, warning=TRUE---------------------------------------------------------------------
 
 #// assemble the full data frame from plate and well info
 assemble_meta <- function(exp_level, plate_level, well_level) {
@@ -420,7 +420,7 @@ return(meta)
 
 
 
-## ----ALTERNATIVE_raw_assembly------------------------------------------------------------
+## ----ALTERNATIVE_raw_assembly----------------------------------------------------------------------------------------------
 
 #// shorter version of raw data merger
 #// based only on lapply and reduce
@@ -462,7 +462,7 @@ return(raw_2)
 
 
 
-## ----raw_assembly, warning=TRUE, include=FALSE-------------------------------------------
+## ----raw_assembly, warning=TRUE, include=FALSE-----------------------------------------------------------------------------
 
 #// raw data assembly
 parse_raw <- function(raw_list, join_by) {
@@ -523,7 +523,7 @@ return(raw)
 
 
 
-## ----clean_raw_and_merge_with_meta, echo=FALSE, warning=TRUE-----------------------------
+## ----clean_raw_and_merge_with_meta, echo=FALSE, warning=TRUE---------------------------------------------------------------
 
 merge_meta_raw <- function(meta, raw, join_by) {
 
@@ -596,7 +596,7 @@ return(complete)
 
 
 
-## ----table_summary, echo=FALSE-----------------------------------------------------------
+## ----table_summary, echo=FALSE---------------------------------------------------------------------------------------------
 
 #// table representation of experiment level annotation
 generate_qc_tables <- function(complete, meta) {
@@ -705,7 +705,7 @@ return(tables)
 
 
 
-## ----QC_plot_function, echo=FALSE--------------------------------------------------------
+## ----QC_plot_function, echo=FALSE------------------------------------------------------------------------------------------
 
 #// ggplot function to build plots
 qc_plot <- function(col, plate, df, Experiment_ID, cur_date) { 
@@ -866,7 +866,7 @@ return(plot)
 
 
 
-## ----plot_summary, echo=FALSE------------------------------------------------------------
+## ----plot_summary, echo=FALSE----------------------------------------------------------------------------------------------
 
 #// function to identify plots to generate
 generate_qc_plots <- function(meta, Experiment_ID, cur_date) {
@@ -906,7 +906,7 @@ return(qc_plots)
 
 
 
-## ----QC_output---------------------------------------------------------------------------
+## ----QC_output-------------------------------------------------------------------------------------------------------------
 
 final_qc <- function(QC) {
 
@@ -926,7 +926,7 @@ final_qc <- function(QC) {
 
 
 
-## ----core of program, fig.width=16, fig.height=12----------------------------------------
+## ----core of program, fig.width=16, fig.height=12--------------------------------------------------------------------------
 
 data_assembly <- function(exp_info) {
 
@@ -1062,7 +1062,7 @@ data_assembly <- function(exp_info) {
      
 
 
-## ----execute merger, eval=FALSE, warning=TRUE, include=FALSE-----------------------------
+## ----execute merger, eval=FALSE, warning=TRUE, include=FALSE---------------------------------------------------------------
 ## 
 ## #// call core assembly process
 ## QC <- data_assembly(exp_info)
@@ -1089,14 +1089,14 @@ data_assembly <- function(exp_info) {
 ## 
 
 
-## ----eval=FALSE, include=FALSE-----------------------------------------------------------
+## ----eval=FALSE, include=FALSE---------------------------------------------------------------------------------------------
 ## 
 ## #// source data_assembly functions
 ## knitr::purl("data_assembly_v05.Rmd", output = "./scripts/assembly_functions.R")
 ## 
 
 
-## ----backward compatibility testing, eval=FALSE, include=FALSE---------------------------
+## ----backward compatibility testing, eval=FALSE, include=FALSE-------------------------------------------------------------
 ## 
 ## 
 ## experiment_list <- list()
